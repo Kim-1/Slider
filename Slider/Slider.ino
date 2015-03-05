@@ -48,6 +48,17 @@ byte rightArr[8] = {
   B11000,
 };
 
+//settings variables
+int longitude=150; //expressed in cm
+int maxVel=1; //expressed in cm/s
+int maxAcc=1; //expressed in cm/s*s
+
+//Running variables
+int totalPicsTL=0; //The total amount of pictures to take on this run
+int takenPicsTL=0; //The amount of already taken pics
+int leftPicsTL=0; //Pics left=totalPics-takenPics
+int etaTL=0; //ETA to finish expressed in s
+
 
 //for menu management
 int actualMenu=0;
@@ -70,7 +81,7 @@ int distIntTL=2; //The interval of space between every picture when doing a TL e
 
 void setup()
 {
-  
+
  lcd.begin(16, 2);              // start the library
  lcd.setCursor(0,0);
  lcd.createChar(0, upAndDown);
@@ -79,7 +90,7 @@ void setup()
  lcd.clear();
 
 }
- 
+
 void loop()
 {
   guiPrimarioTL();
@@ -91,42 +102,42 @@ void loop()
 
 void guiPrimarioTL(){
   char* menus[]={"Modo", "T entre fotos", "D entre fotos",  "Empezar", "Ajustes"}; //the different menus for this mode
-  
+
    lastKey=lcd_key; //so there is not a push per cycle
    lcd_key = read_LCD_buttons();   // read the buttons
-  
-    
+
+
   lcd.setCursor(0,0);
   lcd.write(byte(1));
-  
+
   lcd.setCursor(15,0);
   lcd.write(byte(2));
-  
-  
+
+
   lcd.setCursor(1,0);
-  
+
   if (actualMenu>4){ //So it returns as a cycle
     actualMenu=0;
   }
-  
+
   if (actualMenu<0){
     actualMenu=4;
   }
-  
+
   lcd.print(menus[actualMenu]); //prints the actual menu
-  
+
   lcd.setCursor(0,1);
-  
+
   //this switch prints the under line
   switch (actualMenu){
-    
+
     case 0:{
       lcd.print(modes[actualMode]);
       lcd.setCursor(14,1);
       lcd.write(byte(0));
       break;
     }
-    
+
     case 1:{
       lcd.print(timeIntTL);
       lcd.setCursor(10,1);
@@ -135,7 +146,7 @@ void guiPrimarioTL(){
       lcd.write(byte(0));
       break;
     }
-    
+
     case 2:{
       lcd.print(distIntTL);
       lcd.setCursor(10,1);
@@ -144,39 +155,39 @@ void guiPrimarioTL(){
       lcd.write(byte(0));
       break;
     }
-    
+
     case 3:{
       lcd.print("Sel para empezar");
       break;
     }
-    
+
     case 4:{
       lcd.print("Sel para ajustes");
       break;
     }
   }
-  
-  
+
+
   if (lastKey!=lcd_key){ //so there is an action per push
-    
+
     lcd.clear();
-    
+
     switch (lcd_key){ //an action per button pushed
-      
+
       case btnRIGHT:{
         actualMenu++;
         break;
       }
-      
+
       case btnLEFT:{
         actualMenu--;
         break;
       }
-      
+
       case btnUP:{
-        
+
         switch (actualMenu){ //this switch changes values
-          
+
           case 0:{
             actualMode++;
             if (actualMode==2){
@@ -184,29 +195,29 @@ void guiPrimarioTL(){
             }
             break;
           }
-          
+
           case 1:{
             timeIntTL++;
             break;
           }
-          
+
           case 2:{
             distIntTL++;
             break;
           }
-          
+
           default:{
             break;
           }
         }
         break;
-        
+
       }
-      
+
       case btnDOWN:{
-        
+
         switch (actualMenu){ //this switch changes values
-          
+
           case 0:{
             actualMode--;
             if (actualMode==-1){
@@ -214,82 +225,88 @@ void guiPrimarioTL(){
             }
             break;
           }
-          
+
           case 1:{
             timeIntTL--;
             break;
           }
-          
+
           case 2:{
             distIntTL--;
             break;
           }
-          
+
           default:{
             break;
           }
         }
         break;
       }
-      
+
       case btnSELECT:{
         switch (actualMenu){
           case 3:{
             isRunning=1;
             break;
           }
-          
+
           case 4:{
             isAdjusting=1;
             break;
           }
-          
+
           default:{
             break;
           }
         }
         break;
       }
-      
-      
+
+
     }
   }
-  
-  
-  
-}
-  
 
-void guiRunning(){
-	
+
+
+}
+
+void setupRunningTL(){
+  totalPicsTL=distIntTL/longitude;
+
+
+}
+
+
+void guiRunningTL(){
+
 	//prints the ETA
 	lcd.setCursor(0,1);
 	lcd.print("ETA: ");
 	lcd.print((150/distIntTL)*timeIntTL);
 	lcd.print(" seg");
-	
-	
+
+
 }
 
 
 
 
 int read_LCD_buttons(){               // read the buttons
-    adc_key_in = analogRead(0);       // read the value from the sensor 
+    adc_key_in = analogRead(0);       // read the value from the sensor
 
-  
-    if (adc_key_in > 1000) return btnNONE; 
 
-    
+    if (adc_key_in > 1000) return btnNONE;
+
+
 
    // For V1.0 comment the other threshold and use the one below:
-   
-     if (adc_key_in < 50)   return btnRIGHT;  
-     if (adc_key_in < 195)  return btnUP; 
-     if (adc_key_in < 380)  return btnDOWN; 
-     if (adc_key_in < 555)  return btnLEFT; 
-     if (adc_key_in < 790)  return btnSELECT;   
-   
+
+     if (adc_key_in < 50)   return btnRIGHT;
+     if (adc_key_in < 195)  return btnUP;
+     if (adc_key_in < 380)  return btnDOWN;
+     if (adc_key_in < 555)  return btnLEFT;
+     if (adc_key_in < 790)  return btnSELECT;
+
 
     return btnNONE;                // when all others fail, return this.
 }

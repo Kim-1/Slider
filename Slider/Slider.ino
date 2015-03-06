@@ -68,6 +68,7 @@ int tickCount=0;  //For the motor timing
 int totalTicks=0;
 
 int stepsLeft=0; //The steps left to be done on this moving cycle
+int longLeft=longitude;
 
 int runningMoment=0; //0:Take pic ; 1:Wait ; 2:Move
 
@@ -320,10 +321,12 @@ void guiPrimarioTL(){
 }
 
 void setupRunningTL(){
-  totalPicsTL=distIntTL/longitude;
+  totalPicsTL=longitude/distIntTL;
   takenPicsTL=0;
   leftPicsTL=0;
   etaTL=0;
+  longLeft=longitude;
+  runningMoment=0;
 
 
 
@@ -334,6 +337,7 @@ void setupRunningTL(){
 void guiRunningTL(){ //Prints the running info
 
 	//prints the ETA
+  etaTL=(longLeft/distIntTL)*timeIntTL;
 	lcd.setCursor(0,1);
 	lcd.print("ETA: ");
 	lcd.print(etaTL);
@@ -341,6 +345,12 @@ void guiRunningTL(){ //Prints the running info
 
   lcd.setCursor(0,0);
   lcd.print(takenPicsTL);
+  lcd.print("/");
+  lcd.print(totalPicsTL);
+
+  if (longLeft>=longitude){
+    isRunningTL=0;
+  }
 
 
 
@@ -402,6 +412,8 @@ void motorMove(){
   if (stepsLeft<1){
     runningMoment=0;
     Timer1.detachInterrupt();
+    longLeft=longLeft-distIntTL;
+
   }
 
 

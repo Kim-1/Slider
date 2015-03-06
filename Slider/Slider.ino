@@ -1,4 +1,5 @@
 #include <LiquidCrystal.h>
+#include <TimerOne.h>
 
 //LCD
 
@@ -27,7 +28,6 @@ byte upAndDown[8] = {
   B01110,
   B00100,
 };
-
 byte leftArr[8] = {
   B00011,
   B00111,
@@ -37,7 +37,6 @@ byte leftArr[8] = {
   B00111,
   B00011,
 };
-
 byte rightArr[8] = {
   B11000,
   B11100,
@@ -53,11 +52,23 @@ int longitude=150; //expressed in cm
 int maxVel=1; //expressed in cm/s
 int maxAcc=1; //expressed in cm/s*s
 
-//Running variables
+float cmPerRev=3.2; //The cms each Revolution moves
+//It would be interesting for this to be automatically calibrated using both endstops
+
+//Running moment TL variables
 int totalPicsTL=0; //The total amount of pictures to take on this run
 int takenPicsTL=0; //The amount of already taken pics
 int leftPicsTL=0; //Pics left=totalPics-takenPics
 int etaTL=0; //ETA to finish expressed in s
+
+int stepsLeft=0; //The steps left to be done on this moving cycle
+
+int runningMoment=0; //0:Take pic ; 1:Wait ; 2:Move
+
+int lastTime=0;
+int actualTime=0;//For time measurement
+
+int firstMotorMove=0;
 
 
 //for menu management
@@ -67,8 +78,9 @@ int actualMenu=0;
 int actualMode=0; //the actual mode: 0 being TL and 1 video
 char*modes[]={"Time Lapse", "Video"}; //the names of the modes
 
-int isRunning=0;
-int isAdjusting=0;
+int isRunningTL=0;
+int firstRunTL=0;
+int isAdjustingTL=0;
 
 
 //variables
@@ -93,6 +105,33 @@ void setup()
 
 void loop()
 {
+  if (isRunningTL==1){
+    if (firstRunTL==1){
+      setupRunningTL();
+      firstRunTL=0;
+    }
+    switch(runningMoment){
+      case 0:{
+        takePic();
+        break;
+      }
+
+      case 1:{
+        wait();
+        break;
+      }
+
+      case 2:{
+        motorMove();
+        break;
+      }
+
+    }
+
+    guiRunningTL();
+  }
+
+
   guiPrimarioTL();
 
 }
@@ -103,8 +142,8 @@ void loop()
 void guiPrimarioTL(){
   char* menus[]={"Modo", "T entre fotos", "D entre fotos",  "Empezar", "Ajustes"}; //the different menus for this mode
 
-   lastKey=lcd_key; //so there is not a push per cycle
-   lcd_key = read_LCD_buttons();   // read the buttons
+  lastKey=lcd_key; //so there is not a push per cycle
+  lcd_key = read_LCD_buttons();   // read the buttons
 
 
   lcd.setCursor(0,0);
@@ -246,12 +285,13 @@ void guiPrimarioTL(){
       case btnSELECT:{
         switch (actualMenu){
           case 3:{
-            isRunning=1;
+            isRunningTL=1;
+            firstRunTL=1;
             break;
           }
 
           case 4:{
-            isAdjusting=1;
+            isAdjustingTL=1;
             break;
           }
 
@@ -272,23 +312,69 @@ void guiPrimarioTL(){
 
 void setupRunningTL(){
   totalPicsTL=distIntTL/longitude;
+  takenPicsTL=0;
+  leftPicsTL=0;
+  etaTL=0;
+
+
 
 
 }
 
 
-void guiRunningTL(){
+void guiRunningTL(){ //Prints the running info
 
 	//prints the ETA
 	lcd.setCursor(0,1);
 	lcd.print("ETA: ");
-	lcd.print((150/distIntTL)*timeIntTL);
+	lcd.print(etaTL);
 	lcd.print(" seg");
+
+
+
 
 
 }
 
 
+
+void takePic(){
+  //Takes one picture in the camera, adds one to takenPics and starts the waiting period
+
+  //takes picture
+
+  takenPicsTL++;
+
+  runningMoment=1;
+  lastTime=millis();
+
+
+}
+
+void wait(){
+  //Waits what the timeIntTL says, when the counter reaches the limit, the motors start to turn
+  actualTime=millis();
+  int deltaTime=actualTime-lastTime;
+  int timeIntInS=timeIntTL*1000;
+
+  if (deltaTime>timeIntInS){
+    runningMode=2;
+  }
+
+  firstMotorMove=1;
+
+
+}
+
+void motorMove(){
+  //Moves the steps indicated by the distIntTL converted to steps
+
+  if (firstMotorMove==1){
+    Timer1.initialize(100);
+    Timer1.attachInterrupt(timerIsr);//the period depends on the current speed
+  }
+
+}
 
 
 int read_LCD_buttons(){               // read the buttons

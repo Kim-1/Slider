@@ -52,7 +52,7 @@ int longitude=150; //expressed in cm
 int maxVel=1; //expressed in cm/s
 int maxAcc=1; //expressed in cm/s*s
 
-float cmPerRev=3.2; //The cms each Revolution moves
+float cmPerStep=0.001; //The cms each Step moves
 //It would be interesting for this to be automatically calibrated using both endstops
 
 //Running moment TL variables
@@ -60,6 +60,8 @@ int totalPicsTL=0; //The total amount of pictures to take on this run
 int takenPicsTL=0; //The amount of already taken pics
 int leftPicsTL=0; //Pics left=totalPics-takenPics
 int etaTL=0; //ETA to finish expressed in s
+
+int tickCount=0;  //For the motor timing
 
 int stepsLeft=0; //The steps left to be done on this moving cycle
 
@@ -358,7 +360,7 @@ void wait(){
   int timeIntInS=timeIntTL*1000;
 
   if (deltaTime>timeIntInS){
-    runningMode=2;
+    runningMoment=2;
   }
 
   firstMotorMove=1;
@@ -372,8 +374,35 @@ void motorMove(){
   if (firstMotorMove==1){
     Timer1.initialize(100);
     Timer1.attachInterrupt(timerIsr);//the period depends on the current speed
+    stepsLeft=distIntTL/cmPerStep;
+    tickCount=0;  //To do think how to go from one speed to the fucking ticking
+
   }
 
+  if (stepsLeft<1){
+    runningMoment=0;
+  }
+
+
+
+
+}
+
+void timerIsr() {
+
+  //if(actual_speed == 0) return;
+
+  tickCount++;
+
+  if(tickCount > 200) { //instead of 200 the number of ticks according to the velocity
+
+    // make a step
+    //digitalWrite(PIN_STEP, HIGH);
+    //digitalWrite(PIN_STEP, LOW);
+    stepsLeft--;
+
+    tickCount = 0;
+  }
 }
 
 

@@ -17,8 +17,11 @@ int adc_key_in  = 0;  //the voltage input
 #define btnSELECT 4
 #define btnNONE   5
 
-//define pins for the motor
+//define pins for the motor and shutter
 //#define STEP_PIN=12;
+#define SHUTTERPIN 22
+#define STEPPIN 30
+#define DIRPIN 31
 
 
 // made up chars for the GUI
@@ -109,6 +112,7 @@ void setup()
  lcd.clear();
  Serial.begin(9600);
  Serial.println("Hello");
+ pinMode(SHUTTERPIN, OUTPUT);
 
 }
 
@@ -348,7 +352,7 @@ void guiRunningTL(){ //Prints the running info
   lcd.print("/");
   lcd.print(totalPicsTL);
 
-  if (longLeft>=longitude){
+  if (longLeft<1){
     isRunningTL=0;
   }
 
@@ -364,6 +368,11 @@ void takePic(){
   //Takes one picture in the camera, adds one to takenPics and starts the waiting period
 
   //takes picture
+  digitalWrite(SHUTTERPIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1500);
+
+  digitalWrite(SHUTTERPIN, LOW);
+
 
   takenPicsTL++;
 

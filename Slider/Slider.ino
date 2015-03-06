@@ -17,6 +17,9 @@ int adc_key_in  = 0;  //the voltage input
 #define btnSELECT 4
 #define btnNONE   5
 
+//define pins for the motor
+//#define STEP_PIN=12;
+
 
 // made up chars for the GUI
 byte upAndDown[8] = {
@@ -52,7 +55,7 @@ int longitude=150; //expressed in cm
 int maxVel=1; //expressed in cm/s
 int maxAcc=1; //expressed in cm/s*s
 
-float cmPerStep=0.001; //The cms each Step moves
+float cmPerStep=0.016; //The cms each Step moves
 //It would be interesting for this to be automatically calibrated using both endstops
 
 //Running moment TL variables
@@ -62,6 +65,7 @@ int leftPicsTL=0; //Pics left=totalPics-takenPics
 int etaTL=0; //ETA to finish expressed in s
 
 int tickCount=0;  //For the motor timing
+int totalTicks=0;
 
 int stepsLeft=0; //The steps left to be done on this moving cycle
 
@@ -98,10 +102,12 @@ void setup()
 
  lcd.begin(16, 2);              // start the library
  lcd.setCursor(0,0);
- lcd.createChar(0, upAndDown);
+ lcd.createChar(0, upAndDown);  //Create the chars
  lcd.createChar(1,leftArr);
  lcd.createChar(2,rightArr);
  lcd.clear();
+ Serial.begin(9600);
+ Serial.println("Hello");
 
 }
 
@@ -131,10 +137,11 @@ void loop()
     }
 
     guiRunningTL();
+  }else{
+    guiPrimarioTL();
   }
 
 
-  guiPrimarioTL();
 
 }
 
@@ -332,6 +339,9 @@ void guiRunningTL(){ //Prints the running info
 	lcd.print(etaTL);
 	lcd.print(" seg");
 
+  lcd.setCursor(0,0);
+  lcd.print(takenPicsTL);
+
 
 
 
@@ -347,6 +357,8 @@ void takePic(){
 
   takenPicsTL++;
 
+  Serial.println("taking pics");
+
   runningMoment=1;
   lastTime=millis();
 
@@ -359,11 +371,15 @@ void wait(){
   int deltaTime=actualTime-lastTime;
   int timeIntInS=timeIntTL*1000;
 
+  Serial.println("waiting");
+
   if (deltaTime>timeIntInS){
     runningMoment=2;
+    firstMotorMove=1;
+    Serial.println(firstMotorMove);
   }
 
-  firstMotorMove=1;
+
 
 
 }
@@ -372,15 +388,20 @@ void motorMove(){
   //Moves the steps indicated by the distIntTL converted to steps
 
   if (firstMotorMove==1){
+
+    stepsLeft=distIntTL/cmPerStep;
+    totalTicks=10000/(maxVel/cmPerStep);  //To do: think how to go from one speed to the fucking ticking
+    Serial.println("stepsLeft");
+    firstMotorMove=0;
     Timer1.initialize(100);
     Timer1.attachInterrupt(timerIsr);//the period depends on the current speed
-    stepsLeft=distIntTL/cmPerStep;
-    tickCount=0;  //To do think how to go from one speed to the fucking ticking
+
 
   }
 
   if (stepsLeft<1){
     runningMoment=0;
+    Timer1.detachInterrupt();
   }
 
 
@@ -394,12 +415,15 @@ void timerIsr() {
 
   tickCount++;
 
-  if(tickCount > 200) { //instead of 200 the number of ticks according to the velocity
+  if(tickCount > totalTicks) { //instead of 200 the number of ticks according to the velocity
 
     // make a step
     //digitalWrite(PIN_STEP, HIGH);
     //digitalWrite(PIN_STEP, LOW);
     stepsLeft--;
+    Serial.println("Timer");
+    Serial.println(stepsLeft);
+
 
     tickCount = 0;
   }

@@ -78,7 +78,7 @@ int runningMoment=0; //0:Take pic ; 1:Wait ; 2:Move
 int lastTime=0;
 int actualTime=0;//For time measurement
 
-boolean doneWaiting=false;
+int doneWaiting=0;
 
 int firstMotorMove=0;
 
@@ -412,6 +412,8 @@ void wait(){
 
   unsigned long timer=1000000;
 
+  doneWaiting=0;
+
 
   Serial.println(timeIntTL);
 
@@ -472,17 +474,16 @@ void motorMove(){
 }
 
 void timerIsrWait() {
-  if (doneWaiting){
+  if (doneWaiting==1){
     Timer1.detachInterrupt();
     digitalWrite(SHUTTERPIN, LOW);
     Serial.println("timer");
     runningMoment=2;
     firstMotorMove=1;
-    doneWaiting=false;
 
     }
 
-  doneWaiting=true;
+  doneWaiting=1;
 
 
 }

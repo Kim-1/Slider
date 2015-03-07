@@ -177,6 +177,7 @@ void guiPrimarioTL(){
     actualMenu=4;
   }
 
+
   lcd.print(menus[actualMenu]); //prints the actual menu
 
   lcd.setCursor(0,1);
@@ -331,6 +332,7 @@ void setupRunningTL(){
   etaTL=0;
   longLeft=longitude;
   runningMoment=0;
+  lastTime=millis();
 
 
 
@@ -390,7 +392,7 @@ void takePic(){
   Serial.println(millis());
 
   runningMoment=1;
-  lastTime=millis();
+  //lastTime=millis();
 
 
 }
@@ -400,12 +402,13 @@ void wait(){
   actualTime=millis();
   int deltaTime=actualTime-lastTime;
   int timeIntInS=timeIntTL*1000;
-  int timeIntForThy=timeIntInS-((((10000/(maxVel/cmPerStep))*100)/1000)*distIntTL/cmPerStep);
+  int timeIntForThy=timeIntInS-((distIntTL/maxVel)*1000);
+  Serial.println(timeIntForThy);
 
-  Serial.print("waiting");
+  Serial.print("waiting ");
   Serial.println(millis());
 
-  if (deltaTime>timeIntForThy){
+  if (deltaTime>timeIntInS){
     digitalWrite(SHUTTERPIN, LOW);
     runningMoment=2;
     firstMotorMove=1;
@@ -422,6 +425,7 @@ void motorMove(){
   //Moves the steps indicated by the distIntTL converted to steps
 
   if (firstMotorMove==1){
+    lastTime=millis();
 
     stepsLeft=distIntTL/cmPerStep;
     totalTicks=10000/(maxVel/cmPerStep);  //To do: think how to go from one speed to the fucking ticking
@@ -436,6 +440,7 @@ void motorMove(){
 
   if (stepsLeft<1){
     runningMoment=0;
+
     Timer1.detachInterrupt();
     longLeft=longLeft-distIntTL;
 

@@ -78,6 +78,8 @@ int runningMoment=0; //0:Take pic ; 1:Wait ; 2:Move
 int lastTime=0;
 int actualTime=0;//For time measurement
 
+boolean doneWaiting=false;
+
 int firstMotorMove=0;
 
 
@@ -113,6 +115,8 @@ void setup()
  Serial.begin(9600);
  Serial.println("Hello");
  pinMode(SHUTTERPIN, OUTPUT);
+
+ Timer1.initialize();
 
 }
 
@@ -390,8 +394,11 @@ void takePic(){
 
   Serial.print("taking pics");
   Serial.println(millis());
+  runningMoment=3;
 
-  runningMoment=1;
+  wait();
+
+
   //lastTime=millis();
 
 
@@ -399,7 +406,21 @@ void takePic(){
 
 void wait(){
   //Waits what the timeIntTL says, when the counter reaches the limit, the motors start to turn
-  actualTime=millis();
+
+  //This version of the code needs to use the timer for waiting.
+  Serial.print("waiting ");
+
+  unsigned long timer=1000000;
+
+
+  Serial.println(timeIntTL);
+
+  Serial.println(timer);
+
+  Timer1.attachInterrupt(timerIsrWait, timer);
+
+
+  /*actualTime=millis();
   int deltaTime=actualTime-lastTime;
   int timeIntInS=timeIntTL*1000;
   int timeIntForThy=timeIntInS-((distIntTL/maxVel)*1000);
@@ -414,7 +435,7 @@ void wait(){
     firstMotorMove=1;
     Serial.println(firstMotorMove);
 
-  }
+  }*/
 
 
 
@@ -432,8 +453,7 @@ void motorMove(){
     Serial.println("totalTicks ");
     Serial.println(totalTicks);
     firstMotorMove=0;
-    Timer1.initialize(100);
-    Timer1.attachInterrupt(timerIsr);//the period depends on the current speed
+    Timer1.attachInterrupt(timerIsr, 100);//the period depends on the current speed
 
 
   }
@@ -447,6 +467,22 @@ void motorMove(){
   }
 
 
+
+
+}
+
+void timerIsrWait() {
+  if (doneWaiting){
+    Timer1.detachInterrupt();
+    digitalWrite(SHUTTERPIN, LOW);
+    Serial.println("timer");
+    runningMoment=2;
+    firstMotorMove=1;
+    doneWaiting=false;
+
+    }
+
+  doneWaiting=true;
 
 
 }

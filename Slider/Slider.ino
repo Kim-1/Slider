@@ -103,6 +103,8 @@ float distIntTL=0.2; //The interval of space between every picture when doing a 
 
 void setup()
 {
+  digitalWrite(STEPPIN, LOW);
+  digitalWrite(DIRPIN, HIGH);
 
  lcd.begin(16, 2);              // start the library
  lcd.setCursor(0,0);
@@ -460,8 +462,8 @@ void timerIsr() {
   if(tickCount > totalTicks) { //instead of 200 the number of ticks according to the velocity
 
     // make a step
-    //digitalWrite(PIN_STEP, HIGH);
-    //digitalWrite(PIN_STEP, LOW);
+    digitalWrite(STEPPIN, HIGH);
+    digitalWrite(STEPPIN, LOW);
     stepsLeft--;
     Serial.print("Timer ");
     Serial.print(millis());

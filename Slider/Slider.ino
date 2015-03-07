@@ -143,6 +143,10 @@ void loop()
         break;
       }
 
+      default:{
+        break;
+      }
+
     }
 
     guiRunningTL();
@@ -474,7 +478,9 @@ void motorMove(){
 }
 
 void timerIsrWait() {
+  Serial.println(doneWaiting);
   if (doneWaiting==1){
+    Serial.println(doneWaiting);
     Timer1.detachInterrupt();
     digitalWrite(SHUTTERPIN, LOW);
     Serial.println("timer");

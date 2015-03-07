@@ -19,9 +19,9 @@ int adc_key_in  = 0;  //the voltage input
 
 //define pins for the motor and shutter
 //#define STEP_PIN=12;
-#define SHUTTERPIN 22
-#define STEPPIN 30
-#define DIRPIN 31
+#define SHUTTERPIN  22
+#define STEPPIN     30
+#define DIRPIN      31
 
 
 // made up chars for the GUI
@@ -54,8 +54,8 @@ byte rightArr[8] = {
 };
 
 //settings variables
-int longitude=150; //expressed in cm
-int maxVel=1; //expressed in cm/s
+float longitude=150; //expressed in cm
+float maxVel=4.8; //expressed in cm/s
 int maxAcc=1; //expressed in cm/s*s
 
 float cmPerStep=0.016; //The cms each Step moves
@@ -71,7 +71,7 @@ int tickCount=0;  //For the motor timing
 int totalTicks=0;
 
 int stepsLeft=0; //The steps left to be done on this moving cycle
-int longLeft=longitude;
+float longLeft=longitude;
 
 int runningMoment=0; //0:Take pic ; 1:Wait ; 2:Move
 
@@ -96,7 +96,7 @@ int isAdjustingTL=0;
 //variables
 int timeIntTL=2; //The interval of time between every picture when doing a TL expressed in seconds
 
-int distIntTL=2; //The interval of space between every picture when doing a TL expressed in cm
+float distIntTL=0.2; //The interval of space between every picture when doing a TL expressed in cm
 
 //must be changed to mm
 
@@ -255,7 +255,7 @@ void guiPrimarioTL(){
           }
 
           case 2:{
-            distIntTL++;
+            distIntTL=distIntTL+0.1;
             break;
           }
 
@@ -285,7 +285,7 @@ void guiPrimarioTL(){
           }
 
           case 2:{
-            distIntTL--;
+            distIntTL=distIntTL-0.1;
             break;
           }
 
@@ -342,10 +342,20 @@ void guiRunningTL(){ //Prints the running info
 
 	//prints the ETA
   etaTL=(longLeft/distIntTL)*timeIntTL;
+  int etaMin=0;
 	lcd.setCursor(0,1);
 	lcd.print("ETA: ");
+
+  while (etaTL>60){
+    etaTL=etaTL-60;
+    etaMin=etaMin+1;
+
+  }
+  lcd.print(etaMin);
+  lcd.print(" m ");
+
 	lcd.print(etaTL);
-	lcd.print(" seg");
+	lcd.print(" s ");
 
   lcd.setCursor(0,0);
   lcd.print(takenPicsTL);
@@ -369,14 +379,15 @@ void takePic(){
 
   //takes picture
   digitalWrite(SHUTTERPIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1500);
 
-  digitalWrite(SHUTTERPIN, LOW);
+
+
 
 
   takenPicsTL++;
 
-  Serial.println("taking pics");
+  Serial.print("taking pics");
+  Serial.println(millis());
 
   runningMoment=1;
   lastTime=millis();
@@ -389,13 +400,17 @@ void wait(){
   actualTime=millis();
   int deltaTime=actualTime-lastTime;
   int timeIntInS=timeIntTL*1000;
+  int timeIntForThy=timeIntInS-((((10000/(maxVel/cmPerStep))*100)/1000)*distIntTL/cmPerStep);
 
-  Serial.println("waiting");
+  Serial.print("waiting");
+  Serial.println(millis());
 
-  if (deltaTime>timeIntInS){
+  if (deltaTime>timeIntForThy){
+    digitalWrite(SHUTTERPIN, LOW);
     runningMoment=2;
     firstMotorMove=1;
     Serial.println(firstMotorMove);
+
   }
 
 
@@ -410,7 +425,8 @@ void motorMove(){
 
     stepsLeft=distIntTL/cmPerStep;
     totalTicks=10000/(maxVel/cmPerStep);  //To do: think how to go from one speed to the fucking ticking
-    Serial.println("stepsLeft");
+    Serial.println("totalTicks ");
+    Serial.println(totalTicks);
     firstMotorMove=0;
     Timer1.initialize(100);
     Timer1.attachInterrupt(timerIsr);//the period depends on the current speed
@@ -442,8 +458,8 @@ void timerIsr() {
     //digitalWrite(PIN_STEP, HIGH);
     //digitalWrite(PIN_STEP, LOW);
     stepsLeft--;
-    Serial.println("Timer");
-    Serial.println(stepsLeft);
+    Serial.print("Timer ");
+    Serial.print(millis());
 
 
     tickCount = 0;

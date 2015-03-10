@@ -139,7 +139,7 @@ void loop()
       }
 
       case 2:{
-        motorMove();
+        movementTL();
         break;
       }
 
@@ -466,7 +466,7 @@ void guiSettingsTL(){
 void setupRunningTL(){
   totalPicsTL=longitude/distIntTL;
   takenPicsTL=0;
-  leftPicsTL=0;
+  leftPicsTL=totalPicsTL;
   etaTL=0;
   longLeft=longitude;
   runningMoment=0;
@@ -540,8 +540,8 @@ void wait(){
   actualTime=millis();
   int deltaTime=actualTime-lastTime;
   int timeIntInS=timeIntTL*1000;
-  int timeIntForThy=timeIntInS-((distIntTL/maxVel)*1000);
-  Serial.println(timeIntForThy);
+  //int timeIntForThy=timeIntInS-((distIntTL/maxVel)*1000);
+  //Serial.println(timeIntForThy);
 
   Serial.print("waiting ");
   Serial.println(millis());
@@ -550,7 +550,6 @@ void wait(){
     digitalWrite(SHUTTERPIN, LOW);
     runningMoment=2;
     firstMotorMove=1;
-    Serial.println(firstMotorMove);
 
   }
 
@@ -559,7 +558,33 @@ void wait(){
 
 }
 
-void motorMove(){
+void motorMove(float speed, float distance){ //This function takes a speed and a distance and moves the motor
+  totalTicks=10000/(speed/cmPerStep);
+  stepsLeft=distance/cmPerStep;
+  Timer1.initialize(100);
+  Timer1.attachInterrupt(timerIsr);
+
+  while (stepsLeft>0){
+    Serial.println("Hello");
+  }
+
+  Timer1.detachInterrupt();
+}
+
+void movementTL(){
+  if (firstMotorMove==1){
+    lastTime=millis();
+
+    firstMotorMove=0;
+  }
+
+  motorMove(maxVel, distIntTL);
+  runningMoment=0;
+  longLeft=longLeft-distIntTL;
+
+}
+
+/*void motorMove(){
   //Moves the steps indicated by the distIntTL converted to steps
 
   if (firstMotorMove==1){
@@ -584,10 +609,7 @@ void motorMove(){
 
   }
 
-
-
-
-}
+}*/
 
 void timerIsr() {
 

@@ -84,6 +84,11 @@ int isRunningTL=0;
 int firstRunTL=0;
 int isAdjustingTL=0;
 
+//All the video shit
+int isRunningVI=0;
+int firstRunVi=0;
+int isAdjustingVi=0;
+
 
 //for menu management
 int actualMenu=0;
@@ -123,29 +128,10 @@ void setup()
 void loop()
 {
   if (isRunningTL==1){
-    if (firstRunTL==1){
-      setupRunningTL();
-      firstRunTL=0;
-    }
-    switch(runningMoment){
-      case 0:{
-        takePic();
-        break;
-      }
+    runningOrganizer();
+      }else if (isAdjustingTL==1){
+    guiSettingsTL();
 
-      case 1:{
-        wait();
-        break;
-      }
-
-      case 2:{
-        movementTL();
-        break;
-      }
-
-    }
-
-    guiRunningTL();
   }else{
     guiPrimarioTL();
   }
@@ -154,7 +140,32 @@ void loop()
 
 }
 
+void runningOrganizer(){
+  if (firstRunTL==1){
+    setupRunningTL();
+    firstRunTL=0;
+  }
+  switch(runningMoment){
+    case 0:{
+      takePic();
+      break;
+    }
 
+    case 1:{
+      wait();
+      break;
+    }
+
+    case 2:{
+      movementTL();
+      break;
+    }
+
+  }
+
+  guiRunningTL();
+
+}
 
 
 void guiPrimarioTL(){
@@ -508,8 +519,6 @@ void guiRunningTL(){ //Prints the running info
 
 
 
-
-
 }
 
 
@@ -519,10 +528,6 @@ void takePic(){
 
   //takes picture
   digitalWrite(SHUTTERPIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-
-
-
-
 
   takenPicsTL++;
 

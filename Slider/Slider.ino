@@ -65,13 +65,13 @@ float cmPerStep=0.016; //The cms each Step moves
 int totalPicsTL=0; //The total amount of pictures to take on this run
 int takenPicsTL=0; //The amount of already taken pics
 int leftPicsTL=0; //Pics left=totalPics-takenPics
-int etaTL=0; //ETA to finish expressed in s
+int etaTL=0; //ETA to finish expressed in s. Must check if can be a local variable
 
 int tickCount=0;  //For the motor timing
 int totalTicks=0;
 
 int stepsLeft=0; //The steps left to be done on this moving cycle
-float longLeft=longitude;
+float longLeft=longitude; //The longitude left on the whole slider
 
 int runningMoment=0; //0:Take pic ; 1:Wait ; 2:Move
 
@@ -79,6 +79,10 @@ int lastTime=0;
 int actualTime=0;//For time measurement
 
 int firstMotorMove=0;
+
+int isRunningTL=0;
+int firstRunTL=0;
+int isAdjustingTL=0;
 
 
 //for menu management
@@ -88,9 +92,7 @@ int actualMenu=0;
 int actualMode=0; //the actual mode: 0 being TL and 1 video
 char*modes[]={"Time Lapse", "Video"}; //the names of the modes
 
-int isRunningTL=0;
-int firstRunTL=0;
-int isAdjustingTL=0;
+
 
 
 //variables
@@ -326,6 +328,140 @@ void guiPrimarioTL(){
 
 
 }
+
+void guiSettingsTL(){
+  char* menus[]={"Longitud", "Cm por step", "Vel Max",  "Acc Max"}; //the different menus for this GUI
+
+  lastKey=lcd_key; //so there is not a push per cycle
+  lcd_key = read_LCD_buttons();   // read the buttons
+
+
+  lcd.setCursor(0,0);
+  lcd.write(byte(1));
+
+  lcd.setCursor(15,0);
+  lcd.write(byte(2));
+
+
+  lcd.setCursor(1,0);
+
+  if (actualMenu>3){ //So it returns as a cycle
+    actualMenu=0;
+  }
+  if (actualMenu<0){
+    actualMenu=3;
+  }
+
+  float variables[]={longitude, cmPerStep, maxVel, maxAcc};
+  char *units[]={"cms", "cms", "cm/s", "c/s2"};
+
+
+
+  lcd.print(menus[actualMenu]); //prints the actual menu
+
+  //This four next lines and the variables[] array replace the switch mess I had on the original version, to be tested.
+  lcd.setCursor(0,1);
+
+  lcd.print(variables[actualMenu]);
+  lcd.setCursor(10,1);
+  lcd.print(*units[actualMenu]);
+  lcd.setCursor(14,1);
+  lcd.write(byte(0));
+
+
+
+  if (lastKey!=lcd_key){ //so there is an action per push
+
+    lcd.clear();
+
+    switch (lcd_key){ //an action per button pushed
+
+      case btnRIGHT:{
+        actualMenu++;
+        break;
+      }
+
+      case btnLEFT:{
+        actualMenu--;
+        break;
+      }
+
+      case btnUP:{
+
+        switch (actualMenu){ //this switch changes values
+
+          case 0:{
+            longitude=longitude+0.1;
+            break;
+          }
+
+          case 1:{
+            cmPerStep=cmPerStep+0.001;
+            break;
+          }
+
+          case 2:{
+            maxVel=maxVel+0.1;
+            break;
+          }
+
+          case 3:{
+            maxAcc=maxAcc+0.1;
+            break;
+          }
+
+          default:{
+            break;
+          }
+        }
+        break;
+
+      }
+
+      case btnDOWN:{
+
+        switch (actualMenu){ //this switch changes values
+
+          case 0:{
+            longitude=longitude-0.1;
+            break;
+          }
+
+          case 1:{
+            cmPerStep=cmPerStep-0.001;
+            break;
+          }
+
+          case 2:{
+            maxVel=maxVel-0.1;
+            break;
+          }
+
+          case 3:{
+            maxAcc=maxAcc-0.1;
+            break;
+          }
+
+          default:{
+            break;
+          }
+        }
+        break;
+
+      }
+      case btnSELECT:{
+        isAdjustingTL=0;
+        break;
+      }
+
+
+    }
+  }
+
+
+
+}
+
 
 void setupRunningTL(){
   totalPicsTL=longitude/distIntTL;

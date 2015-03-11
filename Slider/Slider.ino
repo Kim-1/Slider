@@ -53,6 +53,10 @@ byte rightArr[8] = {
   B11000,
 };
 
+#define upAndDownChar 0
+#define leftArrChar 1
+#define rightArrChar  2
+
 //settings variables
 float longitude=150; //expressed in cm
 float maxVel=4.8; //expressed in cm/s
@@ -110,26 +114,34 @@ float distIntTL=0.2; //The interval of space between every picture when doing a 
 
 void setup()
 {
-  digitalWrite(STEPPIN, LOW);
-  digitalWrite(DIRPIN, HIGH);
 
  lcd.begin(16, 2);              // start the library
  lcd.setCursor(0,0);
- lcd.createChar(0, upAndDown);  //Create the chars
- lcd.createChar(1,leftArr);
- lcd.createChar(2,rightArr);
+ lcd.createChar(upAndDownChar, upAndDown);  //Create the chars
+ lcd.createChar(leftArrChar,leftArr);
+ lcd.createChar(rightArrChar,rightArr);
  lcd.clear();
  Serial.begin(9600);
  Serial.println("Hello");
  pinMode(SHUTTERPIN, OUTPUT);
+
+ pinMode(STEPPIN, OUTPUT);
+ pinMode(STEPPIN, OUTPUT);
+
+ digitalWrite(STEPPIN, LOW);
+ digitalWrite(DIRPIN, LOW);
+
 
 }
 
 void loop()
 {
   if (isRunningTL==1){
+
     runningOrganizer();
-      }else if (isAdjustingTL==1){
+
+  }else if (isAdjustingTL==1){
+
     guiSettingsTL();
 
   }else{
@@ -340,18 +352,20 @@ void guiPrimarioTL(){
 
 }
 
-void guiSettingsTL(){
+void guiSettingsTL(){ //In here we display and manage settings
   char* menus[]={"Longitud", "Cm por step", "Vel Max",  "Acc Max"}; //the different menus for this GUI
+  float variables[]={longitude, cmPerStep, maxVel, maxAcc}; //Values to be changed
+  char *units[]={"cms", "cms", "cm/s", "c/s2"}; //Units
+  float alts[]={0.1,0.001,0.1,0.1};
 
   lastKey=lcd_key; //so there is not a push per cycle
   lcd_key = read_LCD_buttons();   // read the buttons
 
-
   lcd.setCursor(0,0);
-  lcd.write(byte(1));
+  lcd.write(byte(leftArrChar));
 
   lcd.setCursor(15,0);
-  lcd.write(byte(2));
+  lcd.write(byte(rightArrChar));
 
 
   lcd.setCursor(1,0);
@@ -363,9 +377,6 @@ void guiSettingsTL(){
     actualMenu=3;
   }
 
-  float variables[]={longitude, cmPerStep, maxVel, maxAcc};
-  char *units[]={"cms", "cms", "cm/s", "c/s2"};
-
 
 
   lcd.print(menus[actualMenu]); //prints the actual menu
@@ -375,9 +386,9 @@ void guiSettingsTL(){
 
   lcd.print(variables[actualMenu]);
   lcd.setCursor(10,1);
-  lcd.print(*units[actualMenu]);
+  lcd.print(units[actualMenu]);
   lcd.setCursor(14,1);
-  lcd.write(byte(0));
+  lcd.write(byte(upAndDownChar));
 
 
 
@@ -399,64 +410,16 @@ void guiSettingsTL(){
 
       case btnUP:{
 
-        switch (actualMenu){ //this switch changes values
+        variables[actualMenu]=variables[actualMenu]+alts[actualMenu];
 
-          case 0:{
-            longitude=longitude+0.1;
-            break;
-          }
-
-          case 1:{
-            cmPerStep=cmPerStep+0.001;
-            break;
-          }
-
-          case 2:{
-            maxVel=maxVel+0.1;
-            break;
-          }
-
-          case 3:{
-            maxAcc=maxAcc+0.1;
-            break;
-          }
-
-          default:{
-            break;
-          }
-        }
         break;
 
       }
 
       case btnDOWN:{
 
-        switch (actualMenu){ //this switch changes values
+        variables[actualMenu]=variables[actualMenu]-alts[actualMenu];
 
-          case 0:{
-            longitude=longitude-0.1;
-            break;
-          }
-
-          case 1:{
-            cmPerStep=cmPerStep-0.001;
-            break;
-          }
-
-          case 2:{
-            maxVel=maxVel-0.1;
-            break;
-          }
-
-          case 3:{
-            maxAcc=maxAcc-0.1;
-            break;
-          }
-
-          default:{
-            break;
-          }
-        }
         break;
 
       }
@@ -470,6 +433,11 @@ void guiSettingsTL(){
   }
 
 
+  //Here we change the variables according to the changes made, with a proper use of pointers this can be wonderfully simplified
+  longitude=variables[0];
+  cmPerStep=variables[1];
+  maxVel=variables[2];
+  maxAcc=variables[3];
 
 }
 
@@ -482,9 +450,6 @@ void setupRunningTL(){
   longLeft=longitude;
   runningMoment=0;
   lastTime=millis();
-
-
-
 
 }
 
@@ -642,8 +607,6 @@ int read_LCD_buttons(){               // read the buttons
 
 
     if (adc_key_in > 1000) return btnNONE;
-
-
 
    // For V1.0 comment the other threshold and use the one below:
 

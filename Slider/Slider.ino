@@ -59,7 +59,7 @@ byte rightArr[8] = {
 
 //settings variables
 float longitude=150; //expressed in cm
-float maxVel=4.8; //expressed in cm/s
+float maxVel=19.2; //expressed in cm/s
 int maxAcc=1; //expressed in cm/s*s
 
 float cmPerStep=0.016; //The cms each Step moves
@@ -105,7 +105,7 @@ char*modes[]={"Time Lapse", "Video"}; //the names of the modes
 
 
 //variables
-int timeIntTL=2; //The interval of time between every picture when doing a TL expressed in seconds
+int timeIntTL=1; //The interval of time between every picture when doing a TL expressed in seconds
 
 float distIntTL=0.2; //The interval of space between every picture when doing a TL expressed in cm
 
@@ -513,8 +513,8 @@ void wait(){
   //int timeIntForThy=timeIntInS-((distIntTL/maxVel)*1000);
   //Serial.println(timeIntForThy);
 
-  Serial.print("waiting ");
-  Serial.println(millis());
+  //Serial.print("waiting ");
+  //Serial.println(millis());
 
   if (deltaTime>timeIntInS){
     digitalWrite(SHUTTERPIN, LOW);
@@ -528,10 +528,35 @@ void wait(){
 
 }
 
+// Runs the motor according to a chosen direction, speed (rounds per seconds) and the number of steps
+void run(boolean runForward, double speedRPS, int stepCount) {
+  digitalWrite(DIRPIN, runForward);
+  for (int i = 0; i < stepCount; i++) {
+    digitalWrite(STEPPIN, HIGH);
+    holdHalfCylce(speedRPS);
+    digitalWrite(STEPPIN, LOW);
+    holdHalfCylce(speedRPS);
+  }
+}
+
+// A custom delay function used in the run()-method
+void holdHalfCylce(double speedRPS) {
+  long holdTime_us = (long)(1.0 / (double) 200 / speedRPS / 2.0 * 1E6);
+  int overflowCount = holdTime_us / 65535;
+  for (int i = 0; i < overflowCount; i++) {
+    delayMicroseconds(65535);
+  }
+  delayMicroseconds((unsigned int) holdTime_us);
+}
+
 void motorMove(float speed, float distance){ //This function takes a speed and a distance and moves the motor
   totalTicks=10000/(speed/cmPerStep);
+  double RPS=(speed/cmPerStep)/200;
   stepsLeft=distance/cmPerStep;
-  Timer1.initialize(100);
+  Serial.print("rps: ");
+  Serial.println(RPS);
+  run(false, 6, stepsLeft);
+  /*Timer1.initialize(100);
   Timer1.attachInterrupt(timerIsr);
 
   while (stepsLeft>0){
@@ -539,6 +564,7 @@ void motorMove(float speed, float distance){ //This function takes a speed and a
   }
 
   Timer1.detachInterrupt();
+  */
 }
 
 void movementTL(){
@@ -591,7 +617,10 @@ void timerIsr() {
 
     // make a step
     digitalWrite(STEPPIN, HIGH);
+    delayMicroseconds(800);
     digitalWrite(STEPPIN, LOW);
+
+    delayMicroseconds(800);
     stepsLeft--;
     Serial.print("Timer ");
     Serial.print(millis());

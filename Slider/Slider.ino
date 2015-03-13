@@ -1,9 +1,11 @@
 #include <LiquidCrystal.h>
 #include <TimerOne.h>
+#include <AccelStepper.h>
 
 //LCD
 
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);           // select the pins used on the LCD panel
+
 
 // define some values used by the panel and buttons
 int lcd_key     = 0;    //the current pressed button
@@ -22,6 +24,12 @@ int adc_key_in  = 0;  //the voltage input
 #define SHUTTERPIN  22
 #define STEPPIN     30
 #define DIRPIN      31
+
+//Define Directions
+#define dirRight HIGH
+#define dirLeft LOW
+
+AccelStepper stepper(1,STEPPIN,DIRPIN);
 
 
 // made up chars for the GUI
@@ -59,8 +67,8 @@ byte rightArr[8] = {
 
 //settings variables
 float longitude=150; //expressed in cm
-float maxVel=4.8; //expressed in cm/s
-int maxAcc=1; //expressed in cm/s*s
+float maxVel=10.0; //expressed in cm/s
+float maxAcc=3; //expressed in cm/s*s
 
 float cmPerStep=0.016; //The cms each Step moves
 //It would be interesting for this to be automatically calibrated using both endstops
@@ -88,10 +96,12 @@ int isRunningTL=0;
 int firstRunTL=0;
 int isAdjustingTL=0;
 
+
+
 //All the video shit
 int isRunningVI=0;
-int firstRunVi=0;
-int isAdjustingVi=0;
+int firstRunVI=0;
+int isAdjustingVI=0;
 
 
 //for menu management
@@ -138,21 +148,27 @@ void loop()
 {
   if (isRunningTL==1){
 
-    runningOrganizer();
+    runningOrganizerTL();
 
   }else if (isAdjustingTL==1){
 
     guiSettingsTL();
 
-  }else{
+  }else if (actualMode==1){
+
+    guiPrimarioVI();
+
+  }else if (actualMode==0){
+
     guiPrimarioTL();
+
   }
 
 
 
 }
 
-void runningOrganizer(){
+void runningOrganizerTL(){
   if (firstRunTL==1){
     setupRunningTL();
     firstRunTL=0;
@@ -441,6 +457,123 @@ void guiSettingsTL(){ //In here we display and manage settings
 
 }
 
+void guiPrimarioVI(){ //In here we display and manage settings
+  char* menus[]={"Modo", "Vel Max", "Acc (0=s/Acc)",  "Empezar", "Ajustes"}; //the different menus for this GUI
+  float variables[]={actualMode, maxVel, maxAcc, isRunningVI, isAdjustingVI}; //Values to be changed
+  char *units[]={"", "cm/s", "cm/s2", "", ""}; //Units
+  float alts[]={1,0.1,0.1,0,0};
+  float altsSel[]={0,0,0,1,1};
+
+  lastKey=lcd_key; //so there is not a push per cycle
+  lcd_key = read_LCD_buttons();   // read the buttons
+
+  lcd.setCursor(0,0);
+  lcd.write(byte(leftArrChar));
+
+  lcd.setCursor(15,0);
+  lcd.write(byte(rightArrChar));
+
+
+  lcd.setCursor(1,0);
+
+  if (actualMenu>4){ //So it returns as a cycle
+    actualMenu=0;
+  }
+  if (actualMenu<0){
+    actualMenu=4;
+  }
+
+
+
+  lcd.print(menus[actualMenu]); //prints the actual menu
+
+  //This four next lines and the variables[] array replace the switch mess I had on the original version, to be tested.
+  lcd.setCursor(0,1);
+
+  switch(actualMenu){
+    case 0:{
+      lcd.print(modes[actualMode]);
+      lcd.setCursor(14,1);
+      lcd.write(byte(upAndDownChar));
+      break;
+    }
+    case 3:{
+      lcd.print("Sel para empezar");
+      break;
+    }
+    case 4:{
+      lcd.print("Sel para ajustes");
+      break;
+    }
+    default:{
+
+      lcd.print(variables[actualMenu]);
+      lcd.setCursor(10,1);
+      lcd.print(units[actualMenu]);
+      lcd.setCursor(14,1);
+      lcd.write(byte(upAndDownChar));
+
+    }
+  }
+
+
+
+  if (lastKey!=lcd_key){ //so there is an action per push
+
+    lcd.clear();
+
+    switch (lcd_key){ //an action per button pushed
+
+      case btnRIGHT:{
+        actualMenu++;
+        break;
+      }
+
+      case btnLEFT:{
+        actualMenu--;
+        break;
+      }
+
+      case btnUP:{
+
+        variables[actualMenu]=variables[actualMenu]+alts[actualMenu];
+
+        break;
+
+      }
+
+      case btnDOWN:{
+
+        variables[actualMenu]=variables[actualMenu]-alts[actualMenu];
+
+        break;
+
+      }
+      case btnSELECT:{
+        variables[actualMenu]=variables[actualMenu]+altsSel[actualMenu];
+        break;
+      }
+
+
+    }
+  }
+
+
+  //Let's correct the mode
+  if (variables[0]==2){
+    variables[0]=0;
+  }else if (variables[0]==-1){
+    variables[0]=1;
+  }
+
+  //Here we change the variables according to the changes made, with a proper use of pointers this can be wonderfully simplified
+  actualMode=variables[0];
+  maxVel=variables[1];
+  maxAcc=variables[2];
+  isRunningVI=variables[3];
+  isAdjustingVI=variables[4];
+
+}
 
 void setupRunningTL(){
   totalPicsTL=longitude/distIntTL;

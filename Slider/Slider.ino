@@ -152,7 +152,7 @@ void loop()
 {
   if (isRunningTL==1){
 
-    runningOrganizerTL();
+    runTL();
 
   }else if (isAdjustingTL==1){
 
@@ -208,6 +208,37 @@ void runningOrganizerTL(){
 
 }
 
+
+void runTL(){
+  setupRunningTL();
+
+  while (longLeft>0){
+
+    switch(runningMoment){
+      case 0:{
+        takePic();
+        break;
+      }
+
+      case 1:{
+        wait();
+        break;
+      }
+
+      case 2:{
+        movementTL();
+        break;
+      }
+
+    }
+
+    guiRunningTL();
+
+
+  }
+
+  isRunningTL=0;
+}
 
 void guiPrimarioTL(){
   char* menus[]={"Modo", "T entre fotos", "D entre fotos",  "Empezar", "Ajustes"}; //the different menus for this mode
@@ -714,7 +745,7 @@ void runVI(){
     stepper.setAcceleration(accInSteps);
     //stepper.runToPosition();
 
-    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH && digitalReadFast(40)==HIGH)){
+    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
       stepper.run();
 
 
@@ -723,7 +754,7 @@ void runVI(){
   }else{
     //stepper.runSpeedToPositionWithEndstop();
 
-    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH && digitalReadFast(40)==HIGH)){
+    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
       stepper.runSpeed();
 
 
@@ -821,7 +852,7 @@ void guiRunningTL(){ //Prints the running info
 	lcd.setCursor(0,1);
 	lcd.print("ETA: ");
 
-  while (etaTL>60){
+  while (etaTL>=60){
     etaTL=etaTL-60;
     etaMin=etaMin+1;
 
@@ -836,10 +867,6 @@ void guiRunningTL(){ //Prints the running info
   lcd.print(takenPicsTL);
   lcd.print("/");
   lcd.print(totalPicsTL);
-
-  if (longLeft<1){
-    isRunningTL=0;
-  }
 
 
 
@@ -888,6 +915,24 @@ void wait(){
 
 }
 
+void movementTL(){
+
+  float speed=maxVel/cmPerStep;
+  float target=distIntTL/cmPerStep;
+
+
+  stepper.move(target);
+  stepper.setMaxSpeed(speed);
+  stepper.setSpeed(speed);
+
+
+  while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
+    stepper.runSpeed();
+
+  lastTime=millis();
+  runningMoment=0;
+  longLeft=longLeft-distIntTL;
+}
 
 int read_LCD_buttons(){               // read the buttons
     adc_key_in = analogRead(0);       // read the value from the sensor

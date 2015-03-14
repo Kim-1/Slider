@@ -926,8 +926,14 @@ void movementTL(){
   stepper.setSpeed(speed);
 
 
-  while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
+  while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH && digitalReadFast(40)==HIGH)){
     stepper.runSpeed();
+  }
+
+  if (digitalReadFast(41)==LOW){//}==LOW || digitalReadFast(40)==LOW){
+    longLeft=0;
+    //run the calibration recommendation
+  }
 
   lastTime=millis();
   runningMoment=0;

@@ -1,11 +1,10 @@
 #include <LiquidCrystal.h>
 #include <TimerOne.h>
 #include <AccelStepper.h>
+#include <digitalWriteFast.h>
 
 //LCD
-
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);           // select the pins used on the LCD panel
-
 
 // define some values used by the panel and buttons
 int lcd_key     = 0;    //the current pressed button
@@ -19,18 +18,19 @@ int adc_key_in  = 0;  //the voltage input
 #define btnSELECT 4
 #define btnNONE   5
 
-//define pins for the motor and shutter
+//define pins for the motor, shutter and endstops
 //#define STEP_PIN=12;
 #define SHUTTERPIN  22
 #define STEPPIN     30
 #define DIRPIN      31
+#define ENDPIN0     40 //This one is closer to the motor
+#define ENDPIN1     41  //While this is further away
 
 //Define Directions
 #define dirRight HIGH
 #define dirLeft LOW
 
 AccelStepper stepper(1,STEPPIN,DIRPIN);
-
 
 // made up chars for the GUI
 byte upAndDown[8] = {
@@ -119,7 +119,7 @@ int timeIntTL=2; //The interval of time between every picture when doing a TL ex
 
 float distIntTL=0.2; //The interval of space between every picture when doing a TL expressed in cm
 
-//must be changed to mm
+
 
 
 void setup()
@@ -136,7 +136,10 @@ void setup()
  pinMode(SHUTTERPIN, OUTPUT);
 
  pinMode(STEPPIN, OUTPUT);
- pinMode(STEPPIN, OUTPUT);
+ pinMode(DIRPIN, OUTPUT);
+
+ pinMode(ENDPIN0, INPUT);
+ pinMode(ENDPIN1, INPUT);
 
  digitalWrite(STEPPIN, LOW);
  digitalWrite(DIRPIN, LOW);
@@ -154,6 +157,9 @@ void loop()
 
     guiSettingsTL();
 
+  }else if(isRunningVI==1){
+    runVI();
+
   }else if (actualMode==1){
 
     guiPrimarioVI();
@@ -162,6 +168,8 @@ void loop()
 
     guiPrimarioTL();
 
+  }else if(isRunningVI==1){
+    runVI();
   }
 
 
@@ -185,7 +193,7 @@ void runningOrganizerTL(){
     }
 
     case 2:{
-      movementTL();
+      //movementTL();
       break;
     }
 
@@ -575,6 +583,53 @@ void guiPrimarioVI(){ //In here we display and manage settings
 
 }
 
+void runVI(){
+
+
+  float speed=maxVel/cmPerStep;
+  float target=longitude/cmPerStep;
+  float maxAccCopy=maxAcc;
+
+  int endStop=1;
+
+  if (maxAccCopy<0){
+    maxAccCopy=maxAccCopy*-1;
+    target=target*-1;
+    endStop=0;
+  }
+
+  stepper.moveTo(target);
+  stepper.setMaxSpeed(speed);
+  stepper.setSpeed(speed);
+
+
+  //bool left=true;
+
+  if (maxAccCopy>0){
+    float accInSteps=maxAccCopy/cmPerStep;
+    stepper.setAcceleration(accInSteps);
+    //stepper.runToPosition();
+
+    while (stepper.distanceToGo()!=0 && digitalReadFast(41)==HIGH){
+      stepper.run();
+      //In here goes the endstop part
+
+    }
+
+  }else{
+    //stepper.runSpeedToPositionWithEndstop();
+
+    while (stepper.distanceToGo()!=0 && digitalReadFast(41)==HIGH){
+      stepper.runSpeed();
+
+      //Endstoppp
+    }
+  }
+  isRunningVI=0;
+
+
+}
+
 void setupRunningTL(){
   totalPicsTL=longitude/distIntTL;
   takenPicsTL=0;
@@ -586,6 +641,70 @@ void setupRunningTL(){
 
 }
 
+void calibrate(){
+  //Move to one side, position =0, start moving and counting steps (no Acc, regular speed),
+  //reach endstop, comeback, compare results, reasonable error, new cmPerStep, longitude, and zeros
+
+  float speed=maxVel/cmPerStep;
+  float target=longitude/cmPerStep;
+  float maxAccCopy=maxAcc;
+
+  int counter1=0;
+  int counter2=0;
+
+  stepper.move(-target*2);
+  stepper.setSpeed(speed);
+
+  while (digitalReadFast(40)==HIGH){
+    stepper.runSpeed();
+  }
+
+  stepper.setCurrentPosition(0);
+
+  stepper.move(target*2);
+  stepper.setSpeed(speed/2);
+
+  while (digitalReadFast(41)==HIGH){
+    stepper.runSpeed();
+  }
+
+  counter1=stepper.currentPosition();
+
+  stepper.move(-target*2);
+  stepper.setSpeed(speed/2);
+
+  while (digitalReadFast(40)==HIGH){
+    stepper.runSpeed();
+  }
+
+  counter2=stepper.currentPosition();
+
+  //Now the math and the error
+  float error=counter2/counter1;
+
+  if (error<0.01){
+    cmPerStep=longitude/counter1;
+
+  }
+
+}
+
+
+bool endstop(int endNumber){
+
+
+  switch (endNumber){
+    case 0:{
+      return digitalRead(ENDPIN0);
+      break;
+    }
+    case 1:{
+      return digitalRead(ENDPIN1);
+      break;
+    }
+  }
+  return 0;
+}
 
 void guiRunningTL(){ //Prints the running info
 

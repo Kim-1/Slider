@@ -67,11 +67,12 @@ byte rightArr[8] = {
 
 //settings variables
 float longitude=150; //expressed in cm
+float cmPerStep=0.016; //The cms each Step moves
+//It would be interesting for this to be automatically calibrated using both endstops
+
 float maxVel=10.0; //expressed in cm/s
 float maxAcc=3; //expressed in cm/s*s
 
-float cmPerStep=0.016; //The cms each Step moves
-//It would be interesting for this to be automatically calibrated using both endstops
 
 //Running moment TL variables
 int totalPicsTL=0; //The total amount of pictures to take on this run
@@ -160,7 +161,11 @@ void loop()
   }else if(isRunningVI==1){
     runVI();
 
-  }else if (actualMode==1){
+  }else if (isAdjustingVI==1){
+    guiSettingsVI();
+  }
+
+  else if (actualMode==1){
 
     guiPrimarioVI();
 
@@ -376,6 +381,7 @@ void guiPrimarioTL(){
 
 }
 
+
 void guiSettingsTL(){ //In here we display and manage settings
   char* menus[]={"Longitud", "Cm por step", "Vel Max",  "Acc Max"}; //the different menus for this GUI
   float variables[]={longitude, cmPerStep, maxVel, maxAcc}; //Values to be changed
@@ -408,7 +414,7 @@ void guiSettingsTL(){ //In here we display and manage settings
   //This four next lines and the variables[] array replace the switch mess I had on the original version, to be tested.
   lcd.setCursor(0,1);
 
-  lcd.print(variables[actualMenu]);
+  lcd.print(variables[actualMenu], 3);
   lcd.setCursor(10,1);
   lcd.print(units[actualMenu]);
   lcd.setCursor(14,1);
@@ -465,12 +471,13 @@ void guiSettingsTL(){ //In here we display and manage settings
 
 }
 
+
 void guiPrimarioVI(){ //In here we display and manage settings
-  char* menus[]={"Modo", "Vel Max", "Acc (0=s/Acc)",  "Empezar", "Ajustes"}; //the different menus for this GUI
-  float variables[]={actualMode, maxVel, maxAcc, isRunningVI, isAdjustingVI}; //Values to be changed
-  char *units[]={"", "cm/s", "cm/s2", "", ""}; //Units
-  float alts[]={1,0.1,0.1,0,0};
-  float altsSel[]={0,0,0,1,1};
+  char* menus[]={"Modo", "Vel Max", "Acc (0=s/Acc)",  "Empezar", "Ajustes", "Calibrar"}; //the different menus for this GUI
+  float variables[]={actualMode, maxVel, maxAcc, isRunningVI, isAdjustingVI, 0}; //Values to be changed
+  char *units[]={"", "cm/s", "cm/s2", "", "", ""}; //Units
+  float alts[]={1,0.1,0.1,0,0,0};
+  float altsSel[]={0,0,0,1,1,1};
 
   lastKey=lcd_key; //so there is not a push per cycle
   lcd_key = read_LCD_buttons();   // read the buttons
@@ -484,11 +491,11 @@ void guiPrimarioVI(){ //In here we display and manage settings
 
   lcd.setCursor(1,0);
 
-  if (actualMenu>4){ //So it returns as a cycle
+  if (actualMenu>5){ //So it returns as a cycle
     actualMenu=0;
   }
   if (actualMenu<0){
-    actualMenu=4;
+    actualMenu=5;
   }
 
 
@@ -511,6 +518,10 @@ void guiPrimarioVI(){ //In here we display and manage settings
     }
     case 4:{
       lcd.print("Sel para ajustes");
+      break;
+    }
+    case 5:{
+      lcd.print("Sel para calibrar");
       break;
     }
     default:{
@@ -574,12 +585,105 @@ void guiPrimarioVI(){ //In here we display and manage settings
     variables[0]=1;
   }
 
+  //Let's call calibrate
+  if (variables[5]!=0){
+    calibrate();
+    variables[5]=0;
+  }
+
   //Here we change the variables according to the changes made, with a proper use of pointers this can be wonderfully simplified
   actualMode=variables[0];
   maxVel=variables[1];
   maxAcc=variables[2];
   isRunningVI=variables[3];
   isAdjustingVI=variables[4];
+
+}
+
+void guiSettingsVI(){ //In here we display and manage settings
+  char* menus[]={"Longitud", "Cm por step"}; //the different menus for this GUI
+  float variables[]={longitude, cmPerStep}; //Values to be changed
+  char *units[]={"cms", "cms"}; //Units
+  float alts[]={0.1,0.001};
+
+  lastKey=lcd_key; //so there is not a push per cycle
+  lcd_key = read_LCD_buttons();   // read the buttons
+
+  lcd.setCursor(0,0);
+  lcd.write(byte(leftArrChar));
+
+  lcd.setCursor(15,0);
+  lcd.write(byte(rightArrChar));
+
+
+  lcd.setCursor(1,0);
+
+  if (actualMenu>1){ //So it returns as a cycle
+    actualMenu=0;
+  }
+  if (actualMenu<0){
+    actualMenu=1;
+  }
+
+
+
+  lcd.print(menus[actualMenu]); //prints the actual menu
+
+  //This four next lines and the variables[] array replace the switch mess I had on the original version, to be tested.
+  lcd.setCursor(0,1);
+
+  lcd.print(variables[actualMenu]);
+  lcd.setCursor(10,1);
+  lcd.print(units[actualMenu]);
+  lcd.setCursor(14,1);
+  lcd.write(byte(upAndDownChar));
+
+
+
+  if (lastKey!=lcd_key){ //so there is an action per push
+
+    lcd.clear();
+
+    switch (lcd_key){ //an action per button pushed
+
+      case btnRIGHT:{
+        actualMenu++;
+        break;
+      }
+
+      case btnLEFT:{
+        actualMenu--;
+        break;
+      }
+
+      case btnUP:{
+
+        variables[actualMenu]=variables[actualMenu]+alts[actualMenu];
+
+        break;
+
+      }
+
+      case btnDOWN:{
+
+        variables[actualMenu]=variables[actualMenu]-alts[actualMenu];
+
+        break;
+
+      }
+      case btnSELECT:{
+        isAdjustingTL=0;
+        break;
+      }
+
+
+    }
+  }
+
+
+  //Here we change the variables according to the changes made, with a proper use of pointers this can be wonderfully simplified
+  longitude=variables[0];
+  cmPerStep=variables[1];
 
 }
 
@@ -610,25 +714,26 @@ void runVI(){
     stepper.setAcceleration(accInSteps);
     //stepper.runToPosition();
 
-    while (stepper.distanceToGo()!=0 && digitalReadFast(41)==HIGH){
+    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH && digitalReadFast(40)==HIGH)){
       stepper.run();
-      //In here goes the endstop part
+
 
     }
 
   }else{
     //stepper.runSpeedToPositionWithEndstop();
 
-    while (stepper.distanceToGo()!=0 && digitalReadFast(41)==HIGH){
+    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH && digitalReadFast(40)==HIGH)){
       stepper.runSpeed();
 
-      //Endstoppp
+
     }
   }
   isRunningVI=0;
 
 
 }
+
 
 void setupRunningTL(){
   totalPicsTL=longitude/distIntTL;
@@ -640,6 +745,7 @@ void setupRunningTL(){
   lastTime=millis();
 
 }
+
 
 void calibrate(){
   //Move to one side, position =0, start moving and counting steps (no Acc, regular speed),
@@ -706,6 +812,7 @@ bool endstop(int endNumber){
   return 0;
 }
 
+
 void guiRunningTL(){ //Prints the running info
 
 	//prints the ETA
@@ -756,6 +863,7 @@ void takePic(){
 
 
 }
+
 
 void wait(){
   //Waits what the timeIntTL says, when the counter reaches the limit, the motors start to turn

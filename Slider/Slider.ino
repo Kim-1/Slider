@@ -181,32 +181,6 @@ void loop()
 
 }
 
-void runningOrganizerTL(){
-  if (firstRunTL==1){
-    setupRunningTL();
-    firstRunTL=0;
-  }
-  switch(runningMoment){
-    case 0:{
-      takePic();
-      break;
-    }
-
-    case 1:{
-      wait();
-      break;
-    }
-
-    case 2:{
-      //movementTL();
-      break;
-    }
-
-  }
-
-  guiRunningTL();
-
-}
 
 
 void runTL(){
@@ -238,178 +212,6 @@ void runTL(){
   }
 
   isRunningTL=0;
-}
-
-void guiPrimarioTL(){
-  char* menus[]={"Modo", "T entre fotos", "D entre fotos",  "Empezar", "Ajustes"}; //the different menus for this mode
-
-  lastKey=lcd_key; //so there is not a push per cycle
-  lcd_key = read_LCD_buttons();   // read the buttons
-
-
-  lcd.setCursor(0,0);
-  lcd.write(byte(1));
-
-  lcd.setCursor(15,0);
-  lcd.write(byte(2));
-
-
-  lcd.setCursor(1,0);
-
-  if (actualMenu>4){ //So it returns as a cycle
-    actualMenu=0;
-  }
-
-  if (actualMenu<0){
-    actualMenu=4;
-  }
-
-
-  lcd.print(menus[actualMenu]); //prints the actual menu
-
-  lcd.setCursor(0,1);
-
-  //this switch prints the under line
-  switch (actualMenu){
-
-    case 0:{
-      lcd.print(modes[actualMode]);
-      lcd.setCursor(14,1);
-      lcd.write(byte(0));
-      break;
-    }
-
-    case 1:{
-      lcd.print(timeIntTL);
-      lcd.setCursor(10,1);
-      lcd.print("seg");
-      lcd.setCursor(14,1);
-      lcd.write(byte(0));
-      break;
-    }
-
-    case 2:{
-      lcd.print(distIntTL);
-      lcd.setCursor(10,1);
-      lcd.print("cm");
-      lcd.setCursor(14,1);
-      lcd.write(byte(0));
-      break;
-    }
-
-    case 3:{
-      lcd.print("Sel para empezar");
-      break;
-    }
-
-    case 4:{
-      lcd.print("Sel para ajustes");
-      break;
-    }
-  }
-
-
-  if (lastKey!=lcd_key){ //so there is an action per push
-
-    lcd.clear();
-
-    switch (lcd_key){ //an action per button pushed
-
-      case btnRIGHT:{
-        actualMenu++;
-        break;
-      }
-
-      case btnLEFT:{
-        actualMenu--;
-        break;
-      }
-
-      case btnUP:{
-
-        switch (actualMenu){ //this switch changes values
-
-          case 0:{
-            actualMode++;
-            if (actualMode==2){
-              actualMode=0;
-            }
-            break;
-          }
-
-          case 1:{
-            timeIntTL++;
-            break;
-          }
-
-          case 2:{
-            distIntTL=distIntTL+0.1;
-            break;
-          }
-
-          default:{
-            break;
-          }
-        }
-        break;
-
-      }
-
-      case btnDOWN:{
-
-        switch (actualMenu){ //this switch changes values
-
-          case 0:{
-            actualMode--;
-            if (actualMode==-1){
-              actualMode=1;
-            }
-            break;
-          }
-
-          case 1:{
-            timeIntTL--;
-            break;
-          }
-
-          case 2:{
-            distIntTL=distIntTL-0.1;
-            break;
-          }
-
-          default:{
-            break;
-          }
-        }
-        break;
-      }
-
-      case btnSELECT:{
-        switch (actualMenu){
-          case 3:{
-            isRunningTL=1;
-            firstRunTL=1;
-            break;
-          }
-
-          case 4:{
-            isAdjustingTL=1;
-            break;
-          }
-
-          default:{
-            break;
-          }
-        }
-        break;
-      }
-
-
-    }
-  }
-
-
-
 }
 
 
@@ -499,6 +301,134 @@ void guiSettingsTL(){ //In here we display and manage settings
   cmPerStep=variables[1];
   maxVel=variables[2];
   maxAcc=variables[3];
+
+}
+
+void guiPrimarioTL(){ //In here we display and manage settings
+  char* menus[]={"Modo", "T entre fotos", "D entre fotos",  "Empezar", "Ajustes", "Calibrar"}; //the different menus for this GUI
+  float variables[]={actualMode, timeIntTL, distIntTL, isRunningTL, isAdjustingTL, 0}; //Values to be changed
+  char *units[]={"", "cm/s", "cm/s2", "", "", ""}; //Units
+  float alts[]={1,1,0.1,0,0,0};
+  float altsSel[]={0,0,0,1,1,1};
+
+  lastKey=lcd_key; //so there is not a push per cycle
+  lcd_key = read_LCD_buttons();   // read the buttons
+
+  lcd.setCursor(0,0);
+  lcd.write(byte(leftArrChar));
+
+  lcd.setCursor(15,0);
+  lcd.write(byte(rightArrChar));
+
+
+  lcd.setCursor(1,0);
+
+  if (actualMenu>5){ //So it returns as a cycle
+    actualMenu=0;
+  }
+  if (actualMenu<0){
+    actualMenu=5;
+  }
+
+
+
+  lcd.print(menus[actualMenu]); //prints the actual menu
+
+  //This four next lines and the variables[] array replace the switch mess I had on the original version, to be tested.
+  lcd.setCursor(0,1);
+
+  switch(actualMenu){
+    case 0:{
+      lcd.print(modes[actualMode]);
+      lcd.setCursor(14,1);
+      lcd.write(byte(upAndDownChar));
+      break;
+    }
+    case 3:{
+      lcd.print("Sel para empezar");
+      break;
+    }
+    case 4:{
+      lcd.print("Sel para ajustes");
+      break;
+    }
+    case 5:{
+      lcd.print("Sel para calibrar");
+      break;
+    }
+    default:{
+
+      lcd.print(variables[actualMenu]);
+      lcd.setCursor(10,1);
+      lcd.print(units[actualMenu]);
+      lcd.setCursor(14,1);
+      lcd.write(byte(upAndDownChar));
+
+    }
+  }
+
+
+
+  if (lastKey!=lcd_key){ //so there is an action per push
+
+    lcd.clear();
+
+    switch (lcd_key){ //an action per button pushed
+
+      case btnRIGHT:{
+        actualMenu++;
+        break;
+      }
+
+      case btnLEFT:{
+        actualMenu--;
+        break;
+      }
+
+      case btnUP:{
+
+        variables[actualMenu]=variables[actualMenu]+alts[actualMenu];
+
+        break;
+
+      }
+
+      case btnDOWN:{
+
+        variables[actualMenu]=variables[actualMenu]-alts[actualMenu];
+
+        break;
+
+      }
+      case btnSELECT:{
+        variables[actualMenu]=variables[actualMenu]+altsSel[actualMenu];
+        break;
+      }
+
+
+    }
+  }
+
+
+  //Let's correct the mode
+  if (variables[0]==2){
+    variables[0]=0;
+  }else if (variables[0]==-1){
+    variables[0]=1;
+  }
+
+  //Let's call calibrate
+  if (variables[5]!=0){
+    calibrate();
+    variables[5]=0;
+  }
+
+  //Here we change the variables according to the changes made, with a proper use of pointers this can be wonderfully simplified
+  actualMode=variables[0];
+  timeIntTL=variables[1];
+  distIntTL=variables[2];
+  isRunningTL=variables[3];
+  isAdjustingTL=variables[4];
 
 }
 
@@ -868,8 +798,6 @@ void guiRunningTL(){ //Prints the running info
   lcd.print("/");
   lcd.print(totalPicsTL);
 
-
-
 }
 
 
@@ -878,7 +806,7 @@ void takePic(){
   //Takes one picture in the camera, adds one to takenPics and starts the waiting period
 
   //takes picture
-  digitalWrite(SHUTTERPIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  digitalWriteFast(SHUTTERPIN, HIGH);   // turn the LED on (HIGH is the voltage level)
 
   takenPicsTL++;
 
@@ -904,7 +832,7 @@ void wait(){
   Serial.println(millis());
 
   if (deltaTime>timeIntInS){
-    digitalWrite(SHUTTERPIN, LOW);
+    digitalWriteFast(SHUTTERPIN, LOW);
     runningMoment=2;
     firstMotorMove=1;
 
@@ -916,6 +844,8 @@ void wait(){
 }
 
 void movementTL(){
+
+  lastTime=millis();
 
   float speed=maxVel/cmPerStep;
   float target=distIntTL/cmPerStep;
@@ -935,7 +865,7 @@ void movementTL(){
     //run the calibration recommendation
   }
 
-  lastTime=millis();
+
   runningMoment=0;
   longLeft=longLeft-distIntTL;
 }

@@ -690,7 +690,7 @@ void runVI(){
 
     while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
       stepper.run();
-
+      loading("Grabando Video..");
 
     }
 
@@ -699,7 +699,7 @@ void runVI(){
 
     while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
       stepper.runSpeed();
-
+      loading("Grabando Video..");
 
     }
   }

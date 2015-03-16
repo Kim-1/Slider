@@ -60,10 +60,20 @@ byte rightArr[8] = {
   B11100,
   B11000,
 };
+byte opt[8] = {
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+};
 
 #define upAndDownChar 0
 #define leftArrChar 1
 #define rightArrChar  2
+#define optChar 3
 
 //settings variables
 float longitude=150; //expressed in cm
@@ -120,7 +130,9 @@ int timeIntTL=2; //The interval of time between every picture when doing a TL ex
 
 float distIntTL=0.2; //The interval of space between every picture when doing a TL expressed in cm
 
-
+//Variables for the loading screen
+int lastTimeLoad=0;
+int piece=0;
 
 
 void setup()
@@ -131,6 +143,7 @@ void setup()
  lcd.createChar(upAndDownChar, upAndDown);  //Create the chars
  lcd.createChar(leftArrChar,leftArr);
  lcd.createChar(rightArrChar,rightArr);
+ lcd.createChar(optChar,opt);
  lcd.clear();
  Serial.begin(9600);
  Serial.println("Hello");
@@ -724,6 +737,7 @@ void calibrate(){
 
   while (digitalReadFast(40)==HIGH){
     stepper.runSpeed();
+    loading("Calibrando...");
   }
 
   stepper.setCurrentPosition(0);
@@ -733,6 +747,7 @@ void calibrate(){
 
   while (digitalReadFast(41)==HIGH){
     stepper.runSpeed();
+    loading("Calibrando...");
   }
 
   counter1=stepper.currentPosition();
@@ -742,6 +757,7 @@ void calibrate(){
 
   while (digitalReadFast(40)==HIGH){
     stepper.runSpeed();
+    loading("Calibrando...");
   }
 
   counter2=stepper.currentPosition();
@@ -756,6 +772,39 @@ void calibrate(){
 
 }
 
+void loading(char myText[]){
+
+  char pieces[]={'|','/','-'};
+
+  lcd.setCursor(0,0);
+  lcd.print(myText);
+  lcd.setCursor(0,1);
+
+  switch (piece){
+    case 3:{
+      lcd.print("\\");
+      break;
+    }
+    default:{
+      lcd.print(pieces[piece]);
+      break;
+    }
+  }
+
+
+
+
+  if (lastTimeLoad<(millis()-300)){
+    piece++;
+
+    if (piece==4){
+      piece=0;
+    }
+
+    lastTimeLoad=millis();
+  }
+
+}
 
 bool endstop(int endNumber){
 
@@ -800,7 +849,58 @@ void guiRunningTL(){ //Prints the running info
 
 }
 
+void recommendCal(){
+  bool buttonPressed=false;
+  bool calibrateIndeed=false;
 
+
+  while (!buttonPressed){
+    lastKey=lcd_key; //so there is not a push per cycle
+    lcd_key = read_LCD_buttons();   // read the buttons
+
+    lcd.setCursor(0,0);
+    lcd.print("Calibrar?");
+    lcd.setCursor(0,1);
+    lcd.write(byte(optChar));
+    lcd.print("Si");
+    lcd.setCursor(5,1);
+    lcd.write(byte(optChar));
+    lcd.print("No");
+
+    if (lastKey!=lcd_key){ //so there is an action per push
+
+      lcd.clear();
+
+
+      switch (lcd_key){ //an action per button pushed
+
+        case btnRIGHT:{
+          calibrateIndeed=false;
+          buttonPressed=true;
+          break;
+        }
+
+        case btnLEFT:{
+          calibrateIndeed=true;
+          buttonPressed=true;
+          break;
+        }
+
+        default:{
+          break;
+        }
+
+
+      }
+    }
+
+  }
+
+  if (calibrateIndeed){
+    calibrate();
+  }
+
+}
 
 void takePic(){
   //Takes one picture in the camera, adds one to takenPics and starts the waiting period
@@ -862,6 +962,7 @@ void movementTL(){
 
   if (digitalReadFast(41)==LOW){//}==LOW || digitalReadFast(40)==LOW){
     longLeft=0;
+    recommendCal();
     //run the calibration recommendation
   }
 

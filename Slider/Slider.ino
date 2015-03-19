@@ -683,23 +683,19 @@ void runVI(){
 
   //bool left=true;
 
-  if (maxAccCopy>0){
+  if (maxAccCopy<0.05){
+    while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN0)==HIGH && digitalReadFast(ENDPIN1)==HIGH)){
+      stepper.runSpeed();
+    }
+  }else{
     float accInSteps=maxAccCopy/cmPerStep;
     stepper.setAcceleration(accInSteps);
     //stepper.runToPosition();
+    lcd.print(maxAccCopy,6);
 
-    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
+    while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN0)==HIGH && digitalReadFast(ENDPIN1)==HIGH)){
       stepper.run();
-      loading("Grabando Video..");
-
-    }
-
-  }else{
-    //stepper.runSpeedToPositionWithEndstop();
-
-    while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH || digitalReadFast(40)==HIGH)){
-      stepper.runSpeed();
-      loading("Grabando Video..");
+      //loading("Grabando Video..");
 
     }
   }
@@ -735,9 +731,10 @@ void calibrate(){
   stepper.move(-target*2);
   stepper.setSpeed(speed);
 
-  while (digitalReadFast(40)==HIGH){
+  lcd.print("Calibrando... 1/3");
+
+  while (digitalReadFast(ENDPIN0)==HIGH){
     stepper.runSpeed();
-    loading("Calibrando...");
   }
 
   stepper.setCurrentPosition(0);
@@ -745,9 +742,10 @@ void calibrate(){
   stepper.move(target*2);
   stepper.setSpeed(speed/2);
 
-  while (digitalReadFast(41)==HIGH){
+  lcd.print("Calibrando... 2/3");
+
+  while (digitalReadFast(ENDPIN1)==HIGH){
     stepper.runSpeed();
-    loading("Calibrando...");
   }
 
   counter1=stepper.currentPosition();
@@ -755,15 +753,18 @@ void calibrate(){
   stepper.move(-target*2);
   stepper.setSpeed(speed/2);
 
-  while (digitalReadFast(40)==HIGH){
+  lcd.print("Calibrando... 3/3");
+
+  while (digitalReadFast(ENDPIN0)==HIGH){
     stepper.runSpeed();
-    loading("Calibrando...");
   }
 
   counter2=stepper.currentPosition();
 
   //Now the math and the error
-  float error=counter2/counter1;
+
+  //new cmPerStep
+  float tempCmPerStep=longitude/counter1;
 
   if (error<0.01){
     cmPerStep=longitude/counter1;
@@ -956,11 +957,11 @@ void movementTL(){
   stepper.setSpeed(speed);
 
 
-  while (stepper.distanceToGo()!=0 && (digitalReadFast(41)==HIGH && digitalReadFast(40)==HIGH)){
+  while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN1)==HIGH && digitalReadFast(ENDPIN0)==HIGH)){
     stepper.runSpeed();
   }
 
-  if (digitalReadFast(41)==LOW){//}==LOW || digitalReadFast(40)==LOW){
+  if (digitalReadFast(ENDPIN0)==LOW) || digitalReadFast(ENDPIN1)==LOW){ //Posible error, no probado
     longLeft=0;
     recommendCal();
     //run the calibration recommendation

@@ -120,7 +120,8 @@ int actualMenu=0;
 
 
 int actualMode=0; //the actual mode: 0 being TL and 1 video
-char*modes[]={"Time Lapse", "Video"}; //the names of the modes
+char*modes[]={"Time Lapse", "Continuo", "Manual"}; //the names of the modes
+int numbOfModes=3;
 
 
 
@@ -185,6 +186,9 @@ void loop()
   }else if (actualMode==0){
 
     guiPrimarioTL();
+
+  }else if(actualMode==2){
+    guiPrimarioMN();
 
   }else if(isRunningVI==1){
     runVI();
@@ -320,7 +324,7 @@ void guiSettingsTL(){ //In here we display and manage settings
 void guiPrimarioTL(){ //In here we display and manage settings
   char* menus[]={"Modo", "T entre fotos", "D entre fotos",  "Empezar", "Ajustes", "Calibrar"}; //the different menus for this GUI
   float variables[]={actualMode, timeIntTL, distIntTL, isRunningTL, isAdjustingTL, 0}; //Values to be changed
-  char *units[]={"", "cm/s", "cm/s2", "", "", ""}; //Units
+  char *units[]={"", "s", "cm", "", "", ""}; //Units
   float alts[]={1,1,0.1,0,0,0};
   float altsSel[]={0,0,0,1,1,1};
 
@@ -424,10 +428,10 @@ void guiPrimarioTL(){ //In here we display and manage settings
 
 
   //Let's correct the mode
-  if (variables[0]==2){
+  if (variables[0]==numbOfModes){
     variables[0]=0;
   }else if (variables[0]==-1){
-    variables[0]=1;
+    variables[0]=numbOfModes-1;
   }
 
   //Let's call calibrate
@@ -553,10 +557,10 @@ void guiPrimarioVI(){ //In here we display and manage settings
 
 
   //Let's correct the mode
-  if (variables[0]==2){
+  if (variables[0]==numbOfModes){
     variables[0]=0;
   }else if (variables[0]==-1){
-    variables[0]=1;
+    variables[0]=numbOfModes-1;
   }
 
   //Let's call calibrate
@@ -571,6 +575,213 @@ void guiPrimarioVI(){ //In here we display and manage settings
   maxAcc=variables[2];
   isRunningVI=variables[3];
   isAdjustingVI=variables[4];
+
+}
+
+void guiPrimarioMN(){ //In here we display and manage settings
+  char* menus[]={"Modo", "Vel", "Acc (0=s/Acc)",  "Manejar", "Ajustes", "Calibrar"}; //the different menus for this GUI
+  float variables[]={actualMode, maxVel, maxAcc, 0, isAdjustingVI, 0}; //Values to be changed
+  char *units[]={"", "cm/s", "cm/s2", "", "", ""}; //Units
+  float alts[]={1,0.1,0.1,0,0,0};
+  float altsSel[]={0,0,0,1,1,1};
+
+  lastKey=lcd_key; //so there is not a push per cycle
+  lcd_key = read_LCD_buttons();   // read the buttons
+
+  lcd.setCursor(0,0);
+  lcd.write(byte(leftArrChar));
+
+  lcd.setCursor(15,0);
+  lcd.write(byte(rightArrChar));
+
+
+  lcd.setCursor(1,0);
+
+  if (actualMenu>5){ //So it returns as a cycle
+    actualMenu=0;
+  }
+  if (actualMenu<0){
+    actualMenu=5;
+  }
+
+
+
+  lcd.print(menus[actualMenu]); //prints the actual menu
+
+  //This four next lines and the variables[] array replace the switch mess I had on the original version, to be tested.
+  lcd.setCursor(0,1);
+
+  switch(actualMenu){
+    case 0:{
+      lcd.print(modes[actualMode]);
+      lcd.setCursor(14,1);
+      lcd.write(byte(upAndDownChar));
+      break;
+    }
+    case 3:{
+      lcd.print("Sel para manejar");
+      break;
+    }
+    case 4:{
+      lcd.print("Sel para ajustes");
+      break;
+    }
+    case 5:{
+      lcd.print("Sel para calibrar");
+      break;
+    }
+    default:{
+
+      lcd.print(variables[actualMenu]);
+      lcd.setCursor(10,1);
+      lcd.print(units[actualMenu]);
+      lcd.setCursor(14,1);
+      lcd.write(byte(upAndDownChar));
+
+    }
+  }
+
+
+
+  if (lastKey!=lcd_key){ //so there is an action per push
+
+    lcd.clear();
+
+    switch (lcd_key){ //an action per button pushed
+
+      case btnRIGHT:{
+        actualMenu++;
+        break;
+      }
+
+      case btnLEFT:{
+        actualMenu--;
+        break;
+      }
+
+      case btnUP:{
+
+        variables[actualMenu]=variables[actualMenu]+alts[actualMenu];
+
+        break;
+
+      }
+
+      case btnDOWN:{
+
+        variables[actualMenu]=variables[actualMenu]-alts[actualMenu];
+
+        break;
+
+      }
+      case btnSELECT:{
+        variables[actualMenu]=variables[actualMenu]+altsSel[actualMenu];
+        break;
+      }
+
+
+    }
+  }
+
+
+  //Let's correct the mode
+  if (variables[0]==numbOfModes){
+    variables[0]=0;
+  }else if (variables[0]==-1){
+    variables[0]=numbOfModes-1;
+  }
+
+  //Let's call calibrate
+  if (variables[5]!=0){
+    calibrate();
+    variables[5]=0;
+  }
+
+  if (variables[3]!=0){
+    runMN();//ToDo
+    variables[3]=0;
+  }
+
+  //Here we change the variables according to the changes made, with a proper use of pointers this can be wonderfully simplified
+  actualMode=variables[0];
+  maxVel=variables[1];
+  maxAcc=variables[2];
+  isAdjustingVI=variables[4]; //ToDo
+
+}
+
+void runMN(){
+
+
+  float speed=maxVel/cmPerStep;
+  float target=longitude/cmPerStep;
+  float maxAccCopy=maxAcc;
+
+  int ended=0;
+
+  if (maxAccCopy<0){
+    maxAccCopy=maxAccCopy*-1;
+    target=target*-1;
+  }
+
+  stepper.move(target);
+  stepper.setMaxSpeed(speed);
+  stepper.setSpeed(speed);
+
+  float accInSteps=maxAccCopy/cmPerStep;
+  stepper.setAcceleration(accInSteps);
+
+
+
+
+  lcd.print("<---    --->");
+
+  while (ended==0){
+
+    lastKey=lcd_key; //so there is not a push per cycle
+    lcd_key = read_LCD_buttons();   // read the buttons
+
+    switch (lcd_key){ //an action per button pushed
+
+      case btnRIGHT:{
+        if (maxAccCopy<0.05){
+          stepper.runSpeed();
+
+        }else{
+          stepper.run();
+
+        }
+        break;
+      }
+
+      case btnLEFT:{
+        stepper.setSpeed(-speed);
+
+        if (maxAccCopy<0.05){
+          stepper.runSpeed();
+
+        }else{
+          stepper.run();
+
+        }
+        break;
+      }
+
+      case btnSELECT:{
+        ended=1;
+        break;
+      }
+
+      default:{
+        stepper.stop();
+        break;
+      }
+
+
+    }
+
+  }
+
 
 }
 
@@ -668,12 +879,10 @@ void runVI(){
   float target=longitude/cmPerStep;
   float maxAccCopy=maxAcc;
 
-  int endStop=1;
 
   if (maxAccCopy<0){
     maxAccCopy=maxAccCopy*-1;
     target=target*-1;
-    endStop=0;
   }
 
   stepper.moveTo(target);
@@ -766,14 +975,16 @@ void calibrate(){
   //new cmPerStep
   float tempCmPerStep=longitude/counter1;
 
+  float error=abs(cmPerStep-tempCmPerStep)/cmPerStep;
+
   if (error<0.01){
-    cmPerStep=longitude/counter1;
+    cmPerStep=tempCmPerStep;
 
   }
 
 }
 
-void loading(char myText[]){
+void loading(char myText[]){ //Not Being used but maybe is better if we implement a timer
 
   char pieces[]={'|','/','-'};
 
@@ -950,18 +1161,19 @@ void movementTL(){
 
   float speed=maxVel/cmPerStep;
   float target=distIntTL/cmPerStep;
-
+  float accInSteps=maxAcc/cmPerStep;
 
   stepper.move(target);
   stepper.setMaxSpeed(speed);
   stepper.setSpeed(speed);
+  stepper.setAcceleration(accInSteps);
 
 
   while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN1)==HIGH && digitalReadFast(ENDPIN0)==HIGH)){
-    stepper.runSpeed();
+    stepper.run();
   }
 
-  if (digitalReadFast(ENDPIN0)==LOW) || digitalReadFast(ENDPIN1)==LOW){ //Posible error, no probado
+  if (digitalReadFast(ENDPIN0)==LOW || digitalReadFast(ENDPIN1)==LOW){ //Posible error, no probado
     longLeft=0;
     recommendCal();
     //run the calibration recommendation

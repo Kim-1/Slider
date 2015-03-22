@@ -20,11 +20,12 @@ int adc_key_in  = 0;  //the voltage input
 
 //define pins for the motor, shutter and endstops
 //#define STEP_PIN=12;
-#define SHUTTERPIN  22
-#define STEPPIN     30
-#define DIRPIN      31
-#define ENDPIN0     40 //This one is closer to the motor
-#define ENDPIN1     41  //While this is further away
+#define SHUTTERPIN  53
+#define FOCUSPIN    45
+#define STEPPIN     27
+#define DIRPIN      29
+#define ENDPIN0     31 //This one is closer to the motor
+#define ENDPIN1     33  //While this is further away
 
 //Define Directions
 #define dirRight HIGH
@@ -76,7 +77,7 @@ byte opt[8] = {
 #define optChar 3
 
 //settings variables
-float longitude=150; //expressed in cm
+float longitude=130; //expressed in cm
 float cmPerStep=0.016; //The cms each Step moves
 //It would be interesting for this to be automatically calibrated using both endstops
 
@@ -706,11 +707,14 @@ void guiPrimarioMN(){ //In here we display and manage settings
   actualMode=variables[0];
   maxVel=variables[1];
   maxAcc=variables[2];
-  isAdjustingVI=variables[4]; //ToDo
+  isAdjustingVI=variables[4]; //Uses the same as the video mode, easier
 
 }
 
 void runMN(){
+
+  delay(1000);
+
 
 
   float speed=maxVel/cmPerStep;
@@ -719,24 +723,27 @@ void runMN(){
 
   int ended=0;
 
+
   if (maxAccCopy<0){
     maxAccCopy=maxAccCopy*-1;
     target=target*-1;
   }
 
+  float accInSteps=maxAccCopy/cmPerStep;
+  stepper.setAcceleration(accInSteps);
+
+
   stepper.move(target);
   stepper.setMaxSpeed(speed);
   stepper.setSpeed(speed);
 
-  float accInSteps=maxAccCopy/cmPerStep;
-  stepper.setAcceleration(accInSteps);
 
 
 
 
   lcd.print("<---    --->");
 
-  while (ended==0){
+  while (ended==0 && (digitalReadFast(ENDPIN0)==HIGH && digitalReadFast(ENDPIN1)==HIGH)){
 
     lastKey=lcd_key; //so there is not a push per cycle
     lcd_key = read_LCD_buttons();   // read the buttons
@@ -744,18 +751,36 @@ void runMN(){
     switch (lcd_key){ //an action per button pushed
 
       case btnRIGHT:{
-        if (maxAccCopy<0.05){
-          stepper.runSpeed();
 
-        }else{
-          stepper.run();
+        stepper.move(target);
+        stepper.setMaxSpeed(speed);
+        stepper.setSpeed(speed);
 
+        int lcdTemp=read_LCD_buttons();
+
+        while (lcdTemp==btnRIGHT){
+          stepper.moveTo(target);
+          stepper.setMaxSpeed(speed);
+          stepper.setSpeed(speed);
+          lcdTemp=read_LCD_buttons();
+
+          if (maxAccCopy<0.05){
+            stepper.runSpeed();
+
+          }else{
+            stepper.run();
+            //lcd.print("hola");
+
+          }
         }
         break;
       }
 
       case btnLEFT:{
+        stepper.move(-target);
+        stepper.setMaxSpeed(speed);
         stepper.setSpeed(-speed);
+
 
         if (maxAccCopy<0.05){
           stepper.runSpeed();
@@ -773,6 +798,7 @@ void runMN(){
       }
 
       default:{
+        stepper.setAcceleration(accInSteps);
         stepper.stop();
         break;
       }
@@ -883,6 +909,7 @@ void runVI(){
   if (maxAccCopy<0){
     maxAccCopy=maxAccCopy*-1;
     target=target*-1;
+    speed=speed*-1;
   }
 
   stepper.moveTo(target);
@@ -920,8 +947,8 @@ void setupRunningTL(){
   leftPicsTL=totalPicsTL;
   etaTL=0;
   longLeft=longitude;
-  runningMoment=0;
-  lastTime=millis();
+  runningMoment=2;
+  //lastTime=millis();
 
 }
 
@@ -1143,8 +1170,11 @@ void wait(){
   Serial.print("waiting ");
   Serial.println(millis());
 
-  if (deltaTime>timeIntInS){
+  if (deltaTime>timeIntInS/2){
     digitalWriteFast(SHUTTERPIN, LOW);
+  }
+
+  if (deltaTime>timeIntInS){
     runningMoment=2;
     firstMotorMove=1;
 
@@ -1159,7 +1189,7 @@ void movementTL(){
 
   lastTime=millis();
 
-  float speed=maxVel/cmPerStep;
+  float speed=(maxVel/cmPerStep)*3/4;
   float target=distIntTL/cmPerStep;
   float accInSteps=maxAcc/cmPerStep;
 
@@ -1170,7 +1200,7 @@ void movementTL(){
 
 
   while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN1)==HIGH && digitalReadFast(ENDPIN0)==HIGH)){
-    stepper.run();
+    stepper.runSpeed();
   }
 
   if (digitalReadFast(ENDPIN0)==LOW || digitalReadFast(ENDPIN1)==LOW){ //Posible error, no probado

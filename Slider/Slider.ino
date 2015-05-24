@@ -24,8 +24,6 @@ int adc_key_in  = 0;  //the voltage input
 #define FOCUSPIN    45
 #define STEPPIN     27
 #define DIRPIN      29
-#define ENDPIN0     31 //This one is closer to the motor
-#define ENDPIN1     33  //While this is further away
 
 //Define Directions
 #define dirRight HIGH
@@ -153,9 +151,6 @@ void setup()
 
  pinMode(STEPPIN, OUTPUT);
  pinMode(DIRPIN, OUTPUT);
-
- pinMode(ENDPIN0, INPUT);
- pinMode(ENDPIN1, INPUT);
 
  digitalWrite(STEPPIN, LOW);
  digitalWrite(DIRPIN, LOW);
@@ -743,7 +738,7 @@ void runMN(){
 
   lcd.print("<---    --->");
 
-  while (ended==0 && (digitalReadFast(ENDPIN0)==HIGH && digitalReadFast(ENDPIN1)==HIGH)){
+  while (ended==0){
 
     lastKey=lcd_key; //so there is not a push per cycle
     lcd_key = read_LCD_buttons();   // read the buttons
@@ -920,7 +915,7 @@ void runVI(){
   //bool left=true;
 
   if (maxAccCopy<0.05){
-    while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN0)==HIGH && digitalReadFast(ENDPIN1)==HIGH)){
+    while (stepper.distanceToGo()!=0){
       stepper.runSpeed();
     }
   }else{
@@ -929,7 +924,7 @@ void runVI(){
     //stepper.runToPosition();
     lcd.print(maxAccCopy,6);
 
-    while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN0)==HIGH && digitalReadFast(ENDPIN1)==HIGH)){
+    while (stepper.distanceToGo()!=0){
       stepper.run();
       //loading("Grabando Video..");
 
@@ -953,61 +948,11 @@ void setupRunningTL(){
 }
 
 
-void calibrate(){
+void calibrate(){ //Without Endstops this whole shit looses sense, still here so we don't cause any bug
   //Move to one side, position =0, start moving and counting steps (no Acc, regular speed),
   //reach endstop, comeback, compare results, reasonable error, new cmPerStep, longitude, and zeros
 
-  float speed=maxVel/cmPerStep;
-  float target=longitude/cmPerStep;
-  float maxAccCopy=maxAcc;
 
-  int counter1=0;
-  int counter2=0;
-
-  stepper.move(-target*2);
-  stepper.setSpeed(speed);
-
-  lcd.print("Calibrando... 1/3");
-
-  while (digitalReadFast(ENDPIN0)==HIGH){
-    stepper.runSpeed();
-  }
-
-  stepper.setCurrentPosition(0);
-
-  stepper.move(target*2);
-  stepper.setSpeed(speed/2);
-
-  lcd.print("Calibrando... 2/3");
-
-  while (digitalReadFast(ENDPIN1)==HIGH){
-    stepper.runSpeed();
-  }
-
-  counter1=stepper.currentPosition();
-
-  stepper.move(-target*2);
-  stepper.setSpeed(speed/2);
-
-  lcd.print("Calibrando... 3/3");
-
-  while (digitalReadFast(ENDPIN0)==HIGH){
-    stepper.runSpeed();
-  }
-
-  counter2=stepper.currentPosition();
-
-  //Now the math and the error
-
-  //new cmPerStep
-  float tempCmPerStep=longitude/counter1;
-
-  float error=abs(cmPerStep-tempCmPerStep)/cmPerStep;
-
-  if (error<0.01){
-    cmPerStep=tempCmPerStep;
-
-  }
 
 }
 
@@ -1045,21 +990,7 @@ void loading(char myText[]){ //Not Being used but maybe is better if we implemen
 
 }
 
-bool endstop(int endNumber){
 
-
-  switch (endNumber){
-    case 0:{
-      return digitalRead(ENDPIN0);
-      break;
-    }
-    case 1:{
-      return digitalRead(ENDPIN1);
-      break;
-    }
-  }
-  return 0;
-}
 
 
 void guiRunningTL(){ //Prints the running info
@@ -1199,15 +1130,11 @@ void movementTL(){
   stepper.setAcceleration(accInSteps);
 
 
-  while (stepper.distanceToGo()!=0 && (digitalReadFast(ENDPIN1)==HIGH && digitalReadFast(ENDPIN0)==HIGH)){
+  while (stepper.distanceToGo()!=0){
     stepper.runSpeed();
   }
 
-  if (digitalReadFast(ENDPIN0)==LOW || digitalReadFast(ENDPIN1)==LOW){ //Posible error, no probado
-    longLeft=0;
-    recommendCal();
-    //run the calibration recommendation
-  }
+
 
 
   runningMoment=0;
